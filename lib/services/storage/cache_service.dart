@@ -277,6 +277,61 @@ class CacheService {
     }
   }
 
+  Future<List<Map<String, dynamic>>> getCachedMediaList() async {
+    try {
+      final box = await Hive.openBox('media');
+      final data = box.get('cached_media');
+      if (data != null && data is List) {
+        return List<Map<String, dynamic>>.from(data);
+      }
+      return [];
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error getting cached media list: $e');
+      }
+      return [];
+    }
+  }
+
+  /// Clear media cache
+  Future<void> clearMediaCache() async {
+    try {
+      final box = await Hive.openBox('media');
+      await box.clear();
+
+      if (kDebugMode) {
+        print('✅ Media cache cleared');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error clearing media cache: $e');
+      }
+    }
+  }
+
+  /// Cache file data (existing method should be updated)
+  Future<void> cacheFileData(String fileId, Uint8List fileData) async {
+    try {
+      final box = _getBox(_filesBox);
+      final entry = CacheEntry(
+        data: {'data': fileData.toList()}, // Convert to List<int> for storage
+        timestamp: DateTime.now(),
+        expiresAt: DateTime.now().add(const Duration(days: 7)),
+      );
+
+      await box.put(fileId, entry.toJson());
+
+      if (kDebugMode) {
+        print('✅ File data cached: $fileId');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error caching file data: $e');
+      }
+      throw CacheException('Failed to cache file data: $e');
+    }
+  }
+
   Future<Map<String, dynamic>?> getCachedMessage(String messageId) async {
     try {
       final box = _getBox(_messagesBox);

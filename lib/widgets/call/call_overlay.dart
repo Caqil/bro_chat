@@ -507,9 +507,15 @@ class _CallOverlayWidgetState extends ConsumerState<CallOverlayWidget>
             colors: [Colors.black.withOpacity(0.8), Colors.transparent],
           ),
         ),
-        child: const CallControlsWidget(
-          layout: CallControlsLayout.horizontal,
-          showLabels: false,
+        child: CallControlsWidget(
+          call: currentCall,
+          isMinimized: false,
+          showMinimize: widget.canMinimize,
+          onEndCall: () => ref.read(callProvider.notifier).endCall(),
+          onMinimize: widget.onMinimize,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          backgroundColor: Colors.transparent,
+          borderRadius: BorderRadius.circular(24),
         ),
       ),
     );

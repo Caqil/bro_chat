@@ -631,9 +631,9 @@ class CallTileWidget extends ConsumerWidget {
 
   IconData _getQualityIcon(double score) {
     if (score >= 4.0) return Icons.signal_wifi_4_bar;
-    if (score >= 3.0) return Icons.bar;
-    if (score >= 2.0) return Icons.signal_wifi_2_bar;
-    if (score >= 1.0) return Icons.signal_wifi_1_bar;
+    if (score >= 3.0) return Icons.signal_cellular_alt_2_bar;
+    if (score >= 2.0) return Icons.signal_cellular_alt_2_bar;
+    if (score >= 1.0) return Icons.signal_cellular_alt_1_bar;
     return Icons.signal_wifi_0_bar;
   }
 

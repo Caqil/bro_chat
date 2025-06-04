@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:contacts_service/contacts_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../../core/utils/snackbar_utils.dart';
 import '../../models/chat/message_model.dart';
 import '../../core/utils/phone_utils.dart';
 import '../../theme/colors.dart';

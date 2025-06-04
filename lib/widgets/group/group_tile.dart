@@ -1,3 +1,4 @@
+import 'package:bro_chat/theme/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
@@ -95,51 +96,38 @@ class GroupTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final groupAsync = ref.watch(groupDataProvider(groupId));
-    final memberCountAsync = ref.watch(groupMemberCountProvider(groupId));
-    final onlineCountAsync = showOnlineCount
-        ? ref.watch(groupOnlineCountProvider(groupId))
-        : const AsyncValue.data(0);
+    // Fix 1: Watch the async provider, not the data provider
+    final groupAsync = ref.watch(groupProvider(groupId));
 
     return groupAsync.when(
       loading: () => _buildSkeleton(context),
       error: (error, stackTrace) => _buildError(context),
-      data: (group) {
+      data: (groupState) {
+        final group = groupState.group;
         if (group == null) return const SizedBox.shrink();
 
         switch (style) {
           case GroupTileStyle.list:
-            return _buildListTile(
-              context,
-              ref,
-              group,
-              memberCountAsync,
-              onlineCountAsync,
-            );
+            return _buildListTile(context, ref, group);
           case GroupTileStyle.card:
-            return _buildCardTile(
-              context,
-              ref,
-              group,
-              memberCountAsync,
-              onlineCountAsync,
-            );
+            return _buildCardTile(context, ref, group);
           case GroupTileStyle.compact:
             return _buildCompactTile(context, group);
           case GroupTileStyle.search:
-            return _buildSearchTile(context, ref, group, memberCountAsync);
+            return _buildSearchTile(context, ref, group);
         }
       },
     );
   }
 
-  Widget _buildListTile(
-    BuildContext context,
-    WidgetRef ref,
-    GroupInfo group,
-    AsyncValue<int> memberCount,
-    AsyncValue<int> onlineCount,
-  ) {
+  // Fix 2: Simplify method signatures to not require AsyncValue parameters
+  Widget _buildListTile(BuildContext context, WidgetRef ref, GroupInfo group) {
+    // Get the actual int values
+    final memberCount = ref.watch(groupMemberCountProvider(groupId));
+    final onlineCount = showOnlineCount
+        ? ref.watch(groupOnlineCountProvider(groupId))
+        : 0;
+
     return Container(
       decoration: BoxDecoration(
         color: isSelected
@@ -162,13 +150,12 @@ class GroupTile extends ConsumerWidget {
     );
   }
 
-  Widget _buildCardTile(
-    BuildContext context,
-    WidgetRef ref,
-    GroupInfo group,
-    AsyncValue<int> memberCount,
-    AsyncValue<int> onlineCount,
-  ) {
+  Widget _buildCardTile(BuildContext context, WidgetRef ref, GroupInfo group) {
+    final memberCount = ref.watch(groupMemberCountProvider(groupId));
+    final onlineCount = showOnlineCount
+        ? ref.watch(groupOnlineCountProvider(groupId))
+        : 0;
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: InkWell(
@@ -247,8 +234,11 @@ class GroupTile extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     GroupInfo group,
-    AsyncValue<int> memberCount,
   ) {
+    final memberCount = showMemberCount
+        ? ref.watch(groupMemberCountProvider(groupId))
+        : 0;
+
     return ListTile(
       onTap: onTap,
       leading: _buildAvatar(group),
@@ -274,19 +264,11 @@ class GroupTile extends ConsumerWidget {
               ),
               if (showMemberCount) ...[
                 const Text(' • '),
-                memberCount.when(
-                  data: (count) => Text(
-                    '$count member${count != 1 ? 's' : ''}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                Text(
+                  '$memberCount member${memberCount != 1 ? 's' : ''}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
-                  loading: () => const SizedBox(
-                    width: 12,
-                    height: 12,
-                    child: CircularProgressIndicator(strokeWidth: 1),
-                  ),
-                  error: (_, __) => const SizedBox.shrink(),
                 ),
               ],
             ],
@@ -300,16 +282,12 @@ class GroupTile extends ConsumerWidget {
   Widget _buildAvatar(GroupInfo group, {double size = 40}) {
     return CircleAvatar(
       radius: size / 2,
-      backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+      backgroundColor: AppColors.primary.withOpacity(0.1),
       backgroundImage: group.avatar != null
           ? NetworkImage(group.avatar!)
           : null,
       child: group.avatar == null
-          ? Icon(
-              Icons.group,
-              size: size * 0.6,
-              color: Theme.of(context).colorScheme.primary,
-            )
+          ? Icon(Icons.group, size: size * 0.6, color: AppColors.primary)
           : null,
     );
   }
@@ -350,19 +328,11 @@ class GroupTile extends ConsumerWidget {
           const SizedBox(width: 4),
         ],
         if (group.isMuted) ...[
-          Icon(
-            Icons.volume_off,
-            size: 16,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
+          Icon(Icons.volume_off, size: 16, color: AppColors.secondaryVariant),
           const SizedBox(width: 4),
         ],
         if (group.isPinned) ...[
-          Icon(
-            Icons.push_pin,
-            size: 16,
-            color: Theme.of(context).colorScheme.primary,
-          ),
+          Icon(Icons.push_pin, size: 16, color: AppColors.primary),
         ],
       ],
     );
@@ -371,8 +341,8 @@ class GroupTile extends ConsumerWidget {
   Widget _buildSubtitle(
     BuildContext context,
     GroupInfo group,
-    AsyncValue<int> memberCount,
-    AsyncValue<int> onlineCount,
+    int memberCount,
+    int onlineCount,
   ) {
     final subtitleParts = <String>[];
 
@@ -381,17 +351,11 @@ class GroupTile extends ConsumerWidget {
     }
 
     if (showMemberCount) {
-      memberCount.whenData((count) {
-        subtitleParts.add('$count member${count != 1 ? 's' : ''}');
-      });
+      subtitleParts.add('$memberCount member${memberCount != 1 ? 's' : ''}');
     }
 
-    if (showOnlineCount) {
-      onlineCount.whenData((count) {
-        if (count > 0) {
-          subtitleParts.add('$count online');
-        }
-      });
+    if (showOnlineCount && onlineCount > 0) {
+      subtitleParts.add('$onlineCount online');
     }
 
     return Text(
@@ -428,29 +392,17 @@ class GroupTile extends ConsumerWidget {
   Widget _buildCardStats(
     BuildContext context,
     GroupInfo group,
-    AsyncValue<int> memberCount,
-    AsyncValue<int> onlineCount,
+    int memberCount,
+    int onlineCount,
   ) {
     return Row(
       children: [
-        _buildStatChip(
-          Icons.people,
-          memberCount.when(
-            data: (count) => count.toString(),
-            loading: () => '...',
-            error: (_, __) => '?',
-          ),
-          'Members',
-        ),
+        _buildStatChip(Icons.people, memberCount.toString(), 'Members'),
         const SizedBox(width: 8),
         if (showOnlineCount)
           _buildStatChip(
             Icons.circle,
-            onlineCount.when(
-              data: (count) => count.toString(),
-              loading: () => '...',
-              error: (_, __) => '?',
-            ),
+            onlineCount.toString(),
             'Online',
             color: Colors.green,
           ),

@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../../core/utils/snackbar_utils.dart';
 import '../../models/chat/message_model.dart';
 import '../../models/file/file_model.dart';
 import '../../providers/file/file_provider.dart';
@@ -131,19 +132,23 @@ class _VideoMessageWidgetState extends ConsumerState<VideoMessageWidget>
     if (widget.message.mediaUrl == null) return;
 
     try {
-      final fileProvider = ref.read(fileProvider.notifier);
-      final files = fileProvider.files;
+      // Check if file exists locally
+      final fileNotifier = ref.read(
+        fileProvider.notifier,
+      ); // ✅ Renamed to fileNotifier
+      final files = fileNotifier.files;
 
+      // Find file by URL or message ID
       final fileInfo = files.values.firstWhere(
         (file) => file.url == widget.message.mediaUrl,
         orElse: () => FileInfo(
           id: '',
           name: '',
           path: '',
-          type: FileType.video,
+          type: FileType.audio,
           purpose: FilePurpose.message,
           size: 0,
-          mimeType: 'video/mp4',
+          mimeType: 'audio/mpeg',
         ),
       );
 
@@ -181,8 +186,10 @@ class _VideoMessageWidgetState extends ConsumerState<VideoMessageWidget>
         throw Exception('File ID not found in message metadata');
       }
 
-      final fileProvider = ref.read(fileProvider.notifier);
-      final fileInfo = await fileProvider.downloadFile(fileId);
+      final fileNotifier = ref.read(
+        fileProvider.notifier,
+      ); // ✅ Renamed here too
+      final fileInfo = await fileNotifier.downloadFile(fileId);
 
       if (mounted) {
         setState(() {

@@ -10,6 +10,8 @@ import '../common/custom_button.dart';
 import '../common/custom_dialog.dart';
 import '../common/custom_bottom_sheet.dart';
 import '../common/custom_text_field.dart';
+import '../common/error_widget.dart';
+import '../common/loading_widget.dart';
 
 class GroupMemberTile extends ConsumerWidget {
   final String groupId;
@@ -33,18 +35,32 @@ class GroupMemberTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final groupAsync = ref.watch(groupDataProvider(groupId));
-    final currentUserCanManage = _canManageMember(groupAsync, member);
+    // Option 1: Watch the async provider directly
+    final groupAsync = ref.watch(groupProvider(groupId));
 
-    return ListTile(
-      onTap: onTap,
-      leading: _buildAvatar(),
-      title: _buildTitle(context),
-      subtitle: _buildSubtitle(context),
-      trailing: showActions && currentUserCanManage
-          ? _buildActions(context, ref)
-          : _buildTrailing(context),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    return groupAsync.when(
+      loading: () => LoadingWidget(message: 'Loading group info...'),
+      error: (error, stackTrace) => CustomErrorWidget(
+        error: AppError.notFound(message: 'Group not found'),
+      ),
+      data: (groupState) {
+        final group = groupState.group;
+        final currentUserCanManage = _canManageMember(group, member);
+
+        return ListTile(
+          onTap: onTap,
+          leading: _buildAvatar(),
+          title: _buildTitle(context),
+          subtitle: _buildSubtitle(context),
+          trailing: showActions && currentUserCanManage
+              ? _buildActions(context, ref)
+              : _buildTrailing(context),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 4,
+          ),
+        );
+      },
     );
   }
 
@@ -187,8 +203,8 @@ class GroupMemberTile extends ConsumerWidget {
       subtitleParts.add('@${member.username}');
     }
 
-    if (showLastSeen && member.lastSeen != null) {
-      subtitleParts.add(_formatLastSeen(member.lastSeen!));
+    if (showLastSeen && member.lastActiveAt != null) {
+      subtitleParts.add(_formatLastSeen(member.lastActiveAt!));
     } else if (member.isOnline) {
       subtitleParts.add('Online');
     }
@@ -211,9 +227,7 @@ class GroupMemberTile extends ConsumerWidget {
       }
     }
 
-    if (member.joinedAt != null) {
-      subtitleParts.add('Joined ${_formatJoinDate(member.joinedAt)}');
-    }
+    subtitleParts.add('Joined ${_formatJoinDate(member.joinedAt)}');
 
     return Text(
       subtitleParts.join(' • '),
@@ -247,9 +261,9 @@ class GroupMemberTile extends ConsumerWidget {
               ),
             ),
           )
-        else if (member.lastSeen != null)
+        else if (member.lastActiveAt != null)
           Text(
-            _formatLastSeenShort(member.lastSeen!),
+            _formatLastSeenShort(member.lastActiveAt!),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
@@ -394,18 +408,18 @@ class GroupMemberTile extends ConsumerWidget {
     String action,
   ) async {
     switch (action) {
-      case 'profile':
-        _viewProfile(context);
-        break;
-      case 'message':
-        _sendMessage(context);
-        break;
-      case 'change_role':
-        _changeRole(context, ref);
-        break;
-      case 'custom_title':
-        _setCustomTitle(context, ref);
-        break;
+      // case 'profile':
+      //   _viewProfile(context);
+      //   break;
+      // case 'message':
+      //   _sendMessage(context);
+      //   break;
+      // case 'change_role':
+      //   _changeRole(context, ref);
+      //   break;
+      // case 'custom_title':
+      //   _setCustomTitle(context, ref);
+      //   break;
       case 'mute':
         _muteMember(context, ref);
         break;
@@ -424,93 +438,89 @@ class GroupMemberTile extends ConsumerWidget {
     }
   }
 
-  void _viewProfile(BuildContext context) {
-    // TODO: Navigate to user profile
-  }
+  // void _viewProfile(BuildContext context) {
+  //   // TODO: Navigate to user profile
+  // }
 
-  void _sendMessage(BuildContext context) {
-    // TODO: Navigate to direct message with user
-  }
+  // void _sendMessage(BuildContext context) {
+  //   // TODO: Navigate to direct message with user
+  // }
 
-  Future<void> _changeRole(BuildContext context, WidgetRef ref) async {
-    final newRole = await SelectionDialog.showSingle<GroupRole>(
-      context: context,
-      title: 'Change Member Role',
-      items: [
-        SelectionDialogItem(
-          value: GroupRole.member,
-          title: 'Member',
-          subtitle: 'Can send messages and view content',
-        ),
-        SelectionDialogItem(
-          value: GroupRole.moderator,
-          title: 'Moderator',
-          subtitle: 'Can moderate messages and manage members',
-        ),
-        SelectionDialogItem(
-          value: GroupRole.admin,
-          title: 'Admin',
-          subtitle: 'Can manage group settings and members',
-        ),
-      ],
-      selectedValue: member.role,
-    );
+  // Future<void> _changeRole(BuildContext context, WidgetRef ref) async {
+  //   final newRole = await SelectionDialog.showSingle<GroupRole>(
+  //     context: context,
+  //     title: 'Change Member Role',
+  //     items: [
+  //       SelectionDialogItem(
+  //         value: GroupRole.member,
+  //         title: 'Member',
+  //         subtitle: 'Can send messages and view content',
+  //       ),
+  //       SelectionDialogItem(
+  //         value: GroupRole.moderator,
+  //         title: 'Moderator',
+  //         subtitle: 'Can moderate messages and manage members',
+  //       ),
+  //       SelectionDialogItem(
+  //         value: GroupRole.admin,
+  //         title: 'Admin',
+  //         subtitle: 'Can manage group settings and members',
+  //       ),
+  //     ],
+  //     selectedValue: member.role,
+  //   );
 
-    if (newRole != null && newRole != member.role) {
-      try {
-        final notifier = ref.read(groupMemberProvider(groupId).notifier);
-        await notifier.updateMemberRole(member.userId, newRole);
+  //   if (newRole != null && newRole != member.role) {
+  //     try {
+  //       final notifier = ref.read(groupMemberProvider(groupId).notifier);
+  //       await notifier.updateMemberRole(member.userId, newRole);
+  //       onMemberUpdated?.call();
+  //       if (context.mounted) {
+  //         ScaffoldMessenger.of(context).showSnackBar(
+  //           SnackBar(content: Text('Role updated to ${newRole.name}')),
+  //         );
+  //       }
+  //     } catch (e) {
+  //       if (context.mounted) {
+  //         ScaffoldMessenger.of(
+  //           context,
+  //         ).showSnackBar(SnackBar(content: Text('Failed to update role: $e')));
+  //       }
+  //     }
+  //   }
+  // }
 
-        onMemberUpdated?.call();
+  // Future<void> _setCustomTitle(BuildContext context, WidgetRef ref) async {
+  //   final title = await InputDialog.show(
+  //     context: context,
+  //     title: 'Set Custom Title',
+  //     hintText: 'Enter custom title...',
+  //     initialValue: member.customTitle,
+  //     maxLength: 50,
+  //   );
 
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Role updated to ${newRole.name}')),
-          );
-        }
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Failed to update role: $e')));
-        }
-      }
-    }
-  }
-
-  Future<void> _setCustomTitle(BuildContext context, WidgetRef ref) async {
-    final title = await InputDialog.show(
-      context: context,
-      title: 'Set Custom Title',
-      hintText: 'Enter custom title...',
-      initialValue: member.customTitle,
-      maxLength: 50,
-    );
-
-    if (title != null) {
-      try {
-        final notifier = ref.read(groupMemberProvider(groupId).notifier);
-        await notifier.setCustomTitle(
-          member.userId,
-          title.isEmpty ? null : title,
-        );
-
-        onMemberUpdated?.call();
-
-        if (context.mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Custom title updated')));
-        }
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Failed to update title: $e')));
-        }
-      }
-    }
-  }
+  //   if (title != null) {
+  //     try {
+  //       final notifier = ref.read(groupMemberProvider(groupId).notifier);
+  //       await notifier.setCustomTitle(
+  //         member.userId,
+  //         title.isEmpty ? null : title,
+  //       );
+  //       onMemberUpdated?.call();
+  //       if (context.mounted) {
+  //         ScaffoldMessenger.of(
+  //           context,
+  //         ).showSnackBar(const SnackBar(content: Text('Custom title updated')));
+  //       }
+  //     } catch (e) {
+  //       if (context.mounted) {
+  //         ScaffoldMessenger.of(
+  //           context,
+  //         ).showSnackBar(SnackBar(content: Text('Failed to update title: $e')));
+  //       }
+  //     }
+  //   }
+  // }
 
   Future<void> _muteMember(BuildContext context, WidgetRef ref) async {
     final result = await _showMuteDialog(context);
@@ -804,17 +814,13 @@ class GroupMemberTile extends ConsumerWidget {
       selected: isSelected,
       onSelected: (selected) {
         setState(() {
-          selectedDuration = selected ? duration : null;
+          // selectedDuration = selected ? duration : null;
         });
       },
     );
   }
 
-  bool _canManageMember(
-    AsyncValue<GroupInfo?> groupAsync,
-    GroupMemberInfo member,
-  ) {
-    final group = groupAsync.value;
+  bool _canManageMember(GroupInfo? group, GroupMemberInfo member) {
     if (group == null) return false;
 
     // TODO: Get current user ID from auth provider

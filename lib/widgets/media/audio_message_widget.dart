@@ -8,9 +8,6 @@ import '../../models/chat/message_model.dart';
 import '../../models/file/file_model.dart';
 import '../../providers/file/file_provider.dart';
 import '../../services/media/audio_service.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_text_styles.dart';
-import '../../core/utils/time_utils.dart';
 import 'dart:math' as math;
 
 import '../../theme/colors.dart';
@@ -26,7 +23,7 @@ class AudioMessageWidget extends ConsumerStatefulWidget {
   final Function(String)? onError;
 
   const AudioMessageWidget({
-    Key? key,
+    super.key,
     required this.message,
     required this.isCurrentUser,
     this.maxWidth = 280,
@@ -34,7 +31,7 @@ class AudioMessageWidget extends ConsumerStatefulWidget {
     this.onDownloadStart,
     this.onDownloadComplete,
     this.onError,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<AudioMessageWidget> createState() => _AudioMessageWidgetState();
@@ -106,8 +103,10 @@ class _AudioMessageWidgetState extends ConsumerState<AudioMessageWidget>
 
     try {
       // Check if file exists locally
-      final fileProvider = ref.read(fileProvider.notifier);
-      final files = fileProvider.files;
+      final fileNotifier = ref.read(
+        fileProvider.notifier,
+      ); // ✅ Renamed to fileNotifier
+      final files = fileNotifier.files;
 
       // Find file by URL or message ID
       final fileInfo = files.values.firstWhere(
@@ -171,8 +170,10 @@ class _AudioMessageWidgetState extends ConsumerState<AudioMessageWidget>
         throw Exception('File ID not found in message metadata');
       }
 
-      final fileProvider = ref.read(fileProvider.notifier);
-      final fileInfo = await fileProvider.downloadFile(fileId);
+      final fileNotifier = ref.read(
+        fileProvider.notifier,
+      ); // ✅ Renamed here too
+      final fileInfo = await fileNotifier.downloadFile(fileId);
 
       if (mounted) {
         setState(() {

@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:record/record.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../models/chat/message_model.dart';
 import '../../providers/chat/message_provider.dart';
@@ -62,7 +63,7 @@ class _MessageInputWidgetState extends ConsumerState<MessageInputWidget>
   bool _isRecording = false;
   bool _hasText = false;
   Timer? _typingTimer;
-  Record? _audioRecorder;
+  AudioRecorder? _audioRecorder; // Changed from Record to AudioRecorder
   String? _recordingPath;
   Duration _recordingDuration = Duration.zero;
   Timer? _recordingTimer;
@@ -108,7 +109,8 @@ class _MessageInputWidgetState extends ConsumerState<MessageInputWidget>
   }
 
   Future<void> _initializeAudioRecorder() async {
-    _audioRecorder = Record();
+    _audioRecorder =
+        AudioRecorder(); // Changed from Record() to AudioRecorder()
   }
 
   @override
@@ -202,6 +204,13 @@ class _MessageInputWidgetState extends ConsumerState<MessageInputWidget>
               ],
             ),
           ),
+
+          // Recording indicator
+          if (_isRecording)
+            VoiceRecordingIndicator(
+              duration: _recordingDuration,
+              onCancel: _cancelRecording,
+            ),
 
           // Emoji picker
           if (_isEmojiPickerVisible)
@@ -395,8 +404,8 @@ class _MessageInputWidgetState extends ConsumerState<MessageInputWidget>
           content = 'Photo';
           metadata = {
             'image': {
-              'width': attachment.fileModel?.metadata?['width'],
-              'height': attachment.fileModel?.metadata?['height'],
+              'width': attachment.fileModel?.metadata['width'],
+              'height': attachment.fileModel?.metadata['height'],
               'size': attachment.size,
             },
           };
@@ -406,7 +415,7 @@ class _MessageInputWidgetState extends ConsumerState<MessageInputWidget>
           content = 'Video';
           metadata = {
             'video': {
-              'duration': attachment.fileModel?.metadata?['duration'],
+              'duration': attachment.fileModel?.metadata['duration'],
               'size': attachment.size,
             },
           };
@@ -416,7 +425,7 @@ class _MessageInputWidgetState extends ConsumerState<MessageInputWidget>
           content = 'Audio';
           metadata = {
             'audio': {
-              'duration': attachment.fileModel?.metadata?['duration'],
+              'duration': attachment.fileModel?.metadata['duration'],
               'size': attachment.size,
             },
           };
@@ -516,19 +525,41 @@ class _MessageInputWidgetState extends ConsumerState<MessageInputWidget>
         _recordingDuration = Duration.zero;
       });
 
-      // Start recording
-      final path = await _audioRecorder!.start();
-      _recordingPath = path;
+      // Check if recording is supported
+      if (await _audioRecorder!.hasPermission()) {
+        // Generate a temporary file path for recording
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final fileName = 'voice_recording_$timestamp.m4a';
 
-      // Start timer
-      _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-        setState(() {
-          _recordingDuration = Duration(seconds: timer.tick);
+        // Get temporary directory
+        final Directory tempDir = await getTemporaryDirectory();
+        final String recordingPath = '${tempDir.path}/$fileName';
+
+        // Store the path for later use
+        _recordingPath = recordingPath;
+
+        // Start recording with proper configuration and path
+        await _audioRecorder!.start(
+          const RecordConfig(
+            encoder: AudioEncoder.aacLc,
+            sampleRate: 44100,
+            bitRate: 128000,
+          ),
+          path: recordingPath,
+        );
+
+        // Start timer
+        _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+          setState(() {
+            _recordingDuration = Duration(seconds: timer.tick);
+          });
         });
-      });
 
-      // Haptic feedback
-      HapticFeedback.lightImpact();
+        // Haptic feedback
+        HapticFeedback.lightImpact();
+      } else {
+        throw Exception('Recording permission not granted');
+      }
     } catch (e) {
       _showError('Failed to start recording: $e');
       setState(() {
@@ -541,17 +572,25 @@ class _MessageInputWidgetState extends ConsumerState<MessageInputWidget>
     if (!_isRecording) return;
 
     try {
-      final path = await _audioRecorder!.stop();
+      await _audioRecorder!.stop();
       _recordingTimer?.cancel();
 
       setState(() {
         _isRecording = false;
       });
 
-      if (path != null && _recordingDuration.inSeconds >= 1) {
-        await _sendVoiceMessage(path, _recordingDuration);
+      if (_recordingPath != null && _recordingDuration.inSeconds >= 1) {
+        await _sendVoiceMessage(_recordingPath!, _recordingDuration);
       } else {
         _showError('Recording too short');
+        // Clean up the file if recording was too short
+        if (_recordingPath != null) {
+          try {
+            File(_recordingPath!).deleteSync();
+          } catch (e) {
+            // Handle error silently
+          }
+        }
       }
 
       HapticFeedback.lightImpact();
@@ -560,25 +599,33 @@ class _MessageInputWidgetState extends ConsumerState<MessageInputWidget>
       setState(() {
         _isRecording = false;
       });
+    } finally {
+      _recordingPath = null; // Clear the path
     }
   }
 
   void _cancelRecording() {
     if (!_isRecording) return;
 
-    _audioRecorder!.stop();
+    // Stop recording (fire and forget)
+    _audioRecorder!.stop().catchError((e) {
+      // Handle error silently
+    });
+
     _recordingTimer?.cancel();
 
     setState(() {
       _isRecording = false;
     });
 
+    // Clean up the recording file
     if (_recordingPath != null) {
       try {
         File(_recordingPath!).deleteSync();
       } catch (e) {
         // Handle error silently
       }
+      _recordingPath = null;
     }
 
     HapticFeedback.lightImpact();
@@ -632,9 +679,11 @@ class _MessageInputWidgetState extends ConsumerState<MessageInputWidget>
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: Colors.red),
+      );
+    }
   }
 }
 
@@ -684,9 +733,11 @@ class _VoiceRecordingIndicatorState extends State<VoiceRecordingIndicator>
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.red.withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.red.withOpacity(0.3)),
       ),
       child: Row(
         children: [

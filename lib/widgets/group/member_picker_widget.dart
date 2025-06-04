@@ -141,7 +141,7 @@ class _MemberPickerWidgetState extends ConsumerState<MemberPickerWidget> {
       child: SearchTextField(
         controller: _searchController,
         hintText: widget.searchHint ?? 'Search users...',
-        onChanged: _onSearchChanged,
+        // Remove onChanged since we're using controller listener
         leadingIcon: _isSearching
             ? const SizedBox(
                 width: 16,
@@ -197,7 +197,7 @@ class _MemberPickerWidgetState extends ConsumerState<MemberPickerWidget> {
 
   Widget _buildUserList() {
     if (_isLoading && _allUsers.isEmpty) {
-      return const LoadingWidget.circular(message: 'Loading users...');
+      return LoadingWidget.circular(message: 'Loading users...');
     }
 
     if (_error != null) {
@@ -325,38 +325,36 @@ class _MemberPickerWidgetState extends ConsumerState<MemberPickerWidget> {
   }
 
   Widget _buildRoleBadge(UserModel user) {
-    // TODO: Get user's role in the group
-    final memberAsync = ref.watch(
+    // Handle the case where groupId might be null
+    if (widget.groupId == null) return const SizedBox.shrink();
+
+    // Get user's role in the group - this returns GroupMemberInfo? directly
+    final member = ref.watch(
       groupMemberByIdProvider((widget.groupId!, user.id)),
     );
 
-    return memberAsync.when(
-      data: (member) {
-        if (member == null) return const SizedBox.shrink();
+    // Since member is GroupMemberInfo? (not AsyncValue), handle it directly
+    if (member == null) return const SizedBox.shrink();
 
-        Color color;
-        switch (member.role) {
-          case GroupRole.owner:
-            color = Colors.purple;
-            break;
-          case GroupRole.admin:
-            color = Colors.blue;
-            break;
-          case GroupRole.moderator:
-            color = Colors.green;
-            break;
-          case GroupRole.member:
-            return const SizedBox.shrink();
-        }
+    Color color;
+    switch (member.role) {
+      case GroupRole.owner:
+        color = Colors.purple;
+        break;
+      case GroupRole.admin:
+        color = Colors.blue;
+        break;
+      case GroupRole.moderator:
+        color = Colors.green;
+        break;
+      case GroupRole.member:
+        return const SizedBox.shrink();
+    }
 
-        return CustomBadge(
-          text: member.roleDisplayName,
-          color: color,
-          size: BadgeSize.small,
-        );
-      },
-      loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+    return CustomBadge(
+      text: member.roleDisplayName,
+      color: color,
+      size: BadgeSize.small,
     );
   }
 
@@ -452,7 +450,7 @@ class _MemberPickerWidgetState extends ConsumerState<MemberPickerWidget> {
 
     if (selectedUsers.isEmpty) return const SizedBox.shrink();
 
-    return Container(
+    return SizedBox(
       height: 40,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
@@ -591,12 +589,19 @@ class _MemberPickerWidgetState extends ConsumerState<MemberPickerWidget> {
           (member) => UserModel(
             id: member.userId,
             name: member.name,
+            phoneNumber:
+                member.phone ?? '', // Provide default empty string if null
+            countryCode:
+                '+1', // Default country code - this should ideally come from member data
             username: member.username,
             avatar: member.avatar,
             email: member.email,
-            phone: member.phone,
             isOnline: member.isOnline,
-            lastSeen: member.lastSeen,
+            lastSeen: member.lastActiveAt,
+            createdAt: member.joinedAt, // Use joinedAt as createdAt
+            updatedAt:
+                member.lastActiveAt ??
+                member.joinedAt, // Use lastActiveAt or fallback to joinedAt
           ),
         )
         .toList();

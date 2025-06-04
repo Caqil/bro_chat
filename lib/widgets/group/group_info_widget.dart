@@ -57,16 +57,9 @@ class _GroupInfoWidgetState extends ConsumerState<GroupInfoWidget> {
   @override
   Widget build(BuildContext context) {
     final groupAsync = ref.watch(groupProvider(widget.groupId));
-    final memberCountAsync = ref.watch(
-      groupMemberCountProvider(widget.groupId),
-    );
-    final onlineCountAsync = ref.watch(
-      groupOnlineCountProvider(widget.groupId),
-    );
 
     return groupAsync.when(
-      loading: () =>
-          LoadingWidget.circular(message: 'Loading group info...'),
+      loading: () => const LoadingWidget(message: 'Loading group info...'),
       error: (error, stackTrace) => CustomErrorWidget(
         error: AppError.unknown(
           message: 'Failed to load group information',
@@ -76,7 +69,7 @@ class _GroupInfoWidgetState extends ConsumerState<GroupInfoWidget> {
       ),
       data: (groupState) {
         if (!groupState.hasGroup) {
-          return CustomErrorWidget(
+          return  CustomErrorWidget(
             error: AppError.notFound(message: 'Group not found'),
           );
         }
@@ -89,16 +82,16 @@ class _GroupInfoWidgetState extends ConsumerState<GroupInfoWidget> {
           _descriptionController.text = group.description ?? '';
         }
 
-        return _buildGroupInfo(group, memberCountAsync, onlineCountAsync);
+        // Get simple int values from providers
+        final memberCount = ref.watch(groupMemberCountProvider(widget.groupId));
+        final onlineCount = ref.watch(groupOnlineCountProvider(widget.groupId));
+
+        return _buildGroupInfo(group, memberCount, onlineCount);
       },
     );
   }
 
-  Widget _buildGroupInfo(
-    GroupInfo group,
-    AsyncValue<int> memberCount,
-    AsyncValue<int> onlineCount,
-  ) {
+  Widget _buildGroupInfo(GroupInfo group, int memberCount, int onlineCount) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Form(
@@ -115,6 +108,62 @@ class _GroupInfoWidgetState extends ConsumerState<GroupInfoWidget> {
             _buildSettings(group),
             const SizedBox(height: 24),
             _buildActions(group),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStats(GroupInfo group, int memberCount, int onlineCount) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Statistics',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatItem(
+                    'Members',
+                    memberCount.toString(),
+                    Icons.people,
+                    subtitle: '${group.maxMembers} max',
+                  ),
+                ),
+                Expanded(
+                  child: _buildStatItem(
+                    'Online',
+                    onlineCount.toString(),
+                    Icons.circle,
+                    color: Colors.green,
+                  ),
+                ),
+                Expanded(
+                  child: _buildStatItem(
+                    'Messages',
+                    group.messageCount.toString(),
+                    Icons.message,
+                  ),
+                ),
+              ],
+            ),
+            if (group.lastActivityAt != null) ...[
+              const SizedBox(height: 16),
+              Text(
+                'Last activity: ${_formatDateTime(group.lastActivityAt!)}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -322,74 +371,6 @@ class _GroupInfoWidgetState extends ConsumerState<GroupInfoWidget> {
                       ),
                     )
                     .toList(),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStats(
-    GroupInfo group,
-    AsyncValue<int> memberCount,
-    AsyncValue<int> onlineCount,
-  ) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Statistics',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatItem(
-                    'Members',
-                    memberCount.when(
-                      data: (count) => count.toString(),
-                      loading: () => '...',
-                      error: (_, __) => '?',
-                    ),
-                    Icons.people,
-                    subtitle: '${group.maxMembers} max',
-                  ),
-                ),
-                Expanded(
-                  child: _buildStatItem(
-                    'Online',
-                    onlineCount.when(
-                      data: (count) => count.toString(),
-                      loading: () => '...',
-                      error: (_, __) => '?',
-                    ),
-                    Icons.circle,
-                    color: Colors.green,
-                  ),
-                ),
-                Expanded(
-                  child: _buildStatItem(
-                    'Messages',
-                    group.messageCount.toString(),
-                    Icons.message,
-                  ),
-                ),
-              ],
-            ),
-            if (group.lastActivityAt != null) ...[
-              const SizedBox(height: 16),
-              Text(
-                'Last activity: ${_formatDateTime(group.lastActivityAt!)}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
               ),
             ],
           ],

@@ -10,6 +10,7 @@ import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../../core/utils/snackbar_utils.dart';
 import '../../models/chat/message_model.dart';
 import '../../models/file/file_model.dart';
 import '../../providers/file/file_provider.dart';
@@ -56,7 +57,7 @@ class _ImageMessageWidgetState extends ConsumerState<ImageMessageWidget>
   String? _errorMessage;
   String? _localFilePath;
   double _downloadProgress = 0.0;
-  ImageInfo? _imageInfo;
+  ImageDataInfo? _imageInfo;
 
   @override
   void initState() {
@@ -100,12 +101,23 @@ class _ImageMessageWidgetState extends ConsumerState<ImageMessageWidget>
       if (metadata != null && metadata['image'] != null) {
         final imageData = metadata['image'] as Map<String, dynamic>;
 
-        _imageInfo = ImageInfo(
+        _imageInfo = ImageDataInfo(
+          path: widget.message.mediaUrl ?? '', // ✅ Required: provide path
+          name:
+              imageData['name'] as String? ??
+              'image.jpg', // ✅ Required: provide name
           width: imageData['width'] as int? ?? 0,
           height: imageData['height'] as int? ?? 0,
-          size: imageData['size'] as int? ?? 0,
-          format: imageData['format'] as String?,
-          aspectRatio: imageData['aspect_ratio'] as double?,
+          fileSize:
+              imageData['size'] as int? ??
+              0, // ✅ Changed from 'size' to 'fileSize'
+          format: _parseImageFormat(
+            imageData['format'] as String?,
+          ), // ✅ Convert String to ImageFormat enum
+          createdAt: widget.message.createdAt, // ✅ Required: provide createdAt
+          modifiedAt:
+              widget.message.updatedAt, // ✅ Optional: provide modifiedAt
+          metadata: imageData, // ✅ Optional: pass the metadata
         );
       }
     } catch (e) {
@@ -113,23 +125,47 @@ class _ImageMessageWidgetState extends ConsumerState<ImageMessageWidget>
     }
   }
 
+  ImageFormat _parseImageFormat(String? formatString) {
+    if (formatString == null) return ImageFormat.jpeg;
+
+    switch (formatString.toLowerCase()) {
+      case 'jpg':
+      case 'jpeg':
+        return ImageFormat.jpeg;
+      case 'png':
+        return ImageFormat.png;
+      case 'gif':
+        return ImageFormat.gif;
+      case 'bmp':
+        return ImageFormat.bmp;
+      case 'webp':
+        return ImageFormat.webp;
+      default:
+        return ImageFormat.jpeg;
+    }
+  }
+
   Future<void> _checkLocalFile() async {
     if (widget.message.mediaUrl == null) return;
 
     try {
-      final fileProvider = ref.read(fileProvider.notifier);
-      final files = fileProvider.files;
+      // Check if file exists locally
+      final fileNotifier = ref.read(
+        fileProvider.notifier,
+      ); // ✅ Renamed to fileNotifier
+      final files = fileNotifier.files;
 
+      // Find file by URL or message ID
       final fileInfo = files.values.firstWhere(
         (file) => file.url == widget.message.mediaUrl,
         orElse: () => FileInfo(
           id: '',
           name: '',
           path: '',
-          type: FileType.image,
+          type: FileType.audio,
           purpose: FilePurpose.message,
           size: 0,
-          mimeType: 'image/jpeg',
+          mimeType: 'audio/mpeg',
         ),
       );
 
@@ -163,8 +199,12 @@ class _ImageMessageWidgetState extends ConsumerState<ImageMessageWidget>
         throw Exception('File ID not found in message metadata');
       }
 
-      final fileProvider = ref.read(fileProvider.notifier);
-      final fileInfo = await fileProvider.downloadFile(fileId);
+      final fileNotifier = ref.read(
+        fileProvider.notifier,
+      ); // ✅ Renamed from fileProvider to fileNotifier
+      final fileInfo = await fileNotifier.downloadFile(
+        fileId,
+      ); // ✅ Updated reference
 
       if (mounted) {
         setState(() {

@@ -473,7 +473,6 @@ class _CallParticipantWidgetState extends ConsumerState<CallParticipantWidget>
       top: 8,
       right: 8,
       child: CustomBadge(
-        icon: _getQualityIcon(quality.qualityScore),
         color: _getQualityColor(quality.qualityScore),
         size: BadgeSize.small,
       ),
@@ -587,10 +586,10 @@ class _CallParticipantWidgetState extends ConsumerState<CallParticipantWidget>
   }
 
   IconData _getQualityIcon(double qualityScore) {
-    if (qualityScore >= 4.0) return Icons.signal_wifi_4_bar;
-    if (qualityScore >= 3.0) return Icons.signal_wifi_3_bar;
-    if (qualityScore >= 2.0) return Icons.signal_wifi_2_bar;
-    if (qualityScore >= 1.0) return Icons.signal_wifi_1_bar;
+    if (qualityScore >= 4.0) return Icons.signal_cellular_4_bar;
+    if (qualityScore >= 3.0) return Icons.signal_cellular_alt_2_bar;
+    if (qualityScore >= 2.0) return Icons.signal_cellular_alt_2_bar;
+    if (qualityScore >= 1.0) return Icons.signal_cellular_alt_1_bar;
     return Icons.signal_wifi_0_bar;
   }
 

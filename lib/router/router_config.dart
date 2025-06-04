@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../providers/auth/auth_provider.dart';
 import '../providers/auth/user_provider.dart';
 import '../providers/common/connectivity_provider.dart';
+import '../screens/auth/login_screen.dart';
+import '../screens/auth/otp_verification_screen.dart';
 import 'route_names.dart';
 import 'route_transitions.dart';
 
@@ -65,10 +67,10 @@ class RouterConfig {
         GoRoute(
           path: RouteNames.otpVerification,
           pageBuilder: (context, state) => RouteTransitions.slideFromRight(
-            OtpVerificationScreen(
+            OTPVerificationScreen(
               phoneNumber: state.uri.queryParameters['phone'] ?? '',
               countryCode: state.uri.queryParameters['country'] ?? '',
-              isPasswordReset: state.uri.queryParameters['reset'] == 'true',
+              //isPasswordReset: state.uri.queryParameters['reset'] == 'true',
             ),
             state,
           ),

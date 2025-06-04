@@ -915,7 +915,6 @@ final groupPrivacyProvider = Provider.family<GroupPrivacy, String>((
   return group?.privacy ?? GroupPrivacy.closed;
 });
 
-
 final groupOwnerIdProvider = Provider.family<String, String>((ref, groupId) {
   final group = ref.watch(groupDataProvider(groupId));
   return group?.ownerId ?? '';
@@ -942,14 +941,6 @@ final isGroupPinnedProvider = Provider.family<bool, String>((ref, groupId) {
 final isGroupArchivedProvider = Provider.family<bool, String>((ref, groupId) {
   final group = ref.watch(groupDataProvider(groupId));
   return group?.isArchived ?? false;
-});
-
-final groupSettingsProvider = Provider.family<GroupSettings, String>((
-  ref,
-  groupId,
-) {
-  final group = ref.watch(groupDataProvider(groupId));
-  return group?.settings ?? GroupSettings();
 });
 
 final groupInviteLinkProvider = Provider.family<String?, String>((

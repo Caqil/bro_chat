@@ -500,50 +500,6 @@ class AppRouter {
   }
 
   // ============================================================================
-  // DIALOG & MODAL HELPERS
-  // ============================================================================
-
-  /// Show a dialog with custom content
-  static Future<T?> showCustomDialog<T>({
-    required BuildContext context,
-    required Widget child,
-    bool barrierDismissible = true,
-    Color? barrierColor,
-    String? barrierLabel,
-  }) {
-    return showDialog<T>(
-      context: context,
-      barrierDismissible: barrierDismissible,
-      barrierColor: barrierColor,
-      barrierLabel: barrierLabel,
-      builder: (context) => child,
-    );
-  }
-
-  /// Show a bottom sheet with custom content
-  static Future<T?> showCustomBottomSheet<T>({
-    required BuildContext context,
-    required Widget child,
-    bool isScrollControlled = false,
-    bool isDismissible = true,
-    bool enableDrag = true,
-    Color? backgroundColor,
-    double? elevation,
-    ShapeBorder? shape,
-  }) {
-    return showModalBottomSheet<T>(
-      context: context,
-      isScrollControlled: isScrollControlled,
-      isDismissible: isDismissible,
-      enableDrag: enableDrag,
-      backgroundColor: backgroundColor,
-      elevation: elevation,
-      shape: shape,
-      builder: (context) => child,
-    );
-  }
-
-  // ============================================================================
   // UTILITY METHODS
   // ============================================================================
 
@@ -575,13 +531,3 @@ class AppRouter {
     _router.refresh();
   }
 }
-
-/// Provider for the router instance
-final routerProvider = Provider<GoRouter>((ref) {
-  return RouterConfig.createRouter(ref);
-});
-
-/// Provider for listening to router changes
-final routerListenableProvider = Provider<Listenable>((ref) {
-  return RouterConfig.getRefreshListenable(ref);
-});

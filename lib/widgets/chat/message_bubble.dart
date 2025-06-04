@@ -2,7 +2,6 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
@@ -14,8 +13,6 @@ import '../media/audio_message_widget.dart';
 import '../media/document_message_widget.dart';
 import '../media/location_message_widget.dart';
 import '../media/contact_message_widget.dart';
-import '../chat/voice_note_player.dart';
-import '../chat/read_receipt_widget.dart';
 
 class MessageBubbleWidget extends ConsumerStatefulWidget {
   final MessageModel message;
@@ -24,6 +21,7 @@ class MessageBubbleWidget extends ConsumerStatefulWidget {
   final bool showSenderName;
   final bool showTimestamp;
   final bool isGroupChat;
+  final List<MessageModel>? relatedImages; // For image gallery
   final VoidCallback? onReply;
   final VoidCallback? onForward;
   final VoidCallback? onDelete;
@@ -32,6 +30,7 @@ class MessageBubbleWidget extends ConsumerStatefulWidget {
   final bool isSelected;
   final VoidCallback? onLongPress;
   final VoidCallback? onDoubleTap;
+  final VoidCallback? onTap;
 
   const MessageBubbleWidget({
     super.key,
@@ -41,6 +40,7 @@ class MessageBubbleWidget extends ConsumerStatefulWidget {
     this.showSenderName = false,
     this.showTimestamp = true,
     this.isGroupChat = false,
+    this.relatedImages,
     this.onReply,
     this.onForward,
     this.onDelete,
@@ -49,6 +49,7 @@ class MessageBubbleWidget extends ConsumerStatefulWidget {
     this.isSelected = false,
     this.onLongPress,
     this.onDoubleTap,
+    this.onTap,
   });
 
   @override
@@ -61,6 +62,7 @@ class _MessageBubbleWidgetState extends ConsumerState<MessageBubbleWidget>
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
   bool _showReactions = false;
+  bool _isDownloading = false;
 
   @override
   void initState() {
@@ -85,82 +87,366 @@ class _MessageBubbleWidgetState extends ConsumerState<MessageBubbleWidget>
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.only(
-        left: widget.isFromCurrentUser ? 60 : 8,
-        right: widget.isFromCurrentUser ? 8 : 60,
-        top: 2,
-        bottom: 2,
-      ),
-      child: AnimatedBuilder(
-        animation: _scaleAnimation,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: _scaleAnimation.value,
-            child: _buildMessageRow(),
-          );
+  // Callback Implementations
+  void _showDownloadIndicator() {
+    if (mounted) {
+      setState(() {
+        _isDownloading = true;
+      });
+    }
+  }
+
+  void _hideDownloadIndicator() {
+    if (mounted) {
+      setState(() {
+        _isDownloading = false;
+      });
+    }
+  }
+
+  void _showSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  void _showErrorSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  void _trackLocationShared() {
+    // Analytics tracking for location sharing
+    print('Location shared analytics tracked');
+  }
+
+  void _trackContactSaved() {
+    // Analytics tracking for contact saving
+    print('Contact saved analytics tracked');
+  }
+
+  // Message Widget Builders
+  Widget _buildImageMessage() {
+    return ClipRRect(
+      borderRadius: _getBubbleBorderRadius(),
+      child: ImageMessageWidget(
+        message: widget.message,
+        isCurrentUser: widget.isFromCurrentUser,
+        maxWidth: MediaQuery.of(context).size.width * 0.75,
+        maxHeight: 400,
+        relatedImages: widget.relatedImages,
+        onDownloadStart: _showDownloadIndicator,
+        onDownloadComplete: () {
+          _hideDownloadIndicator();
+          _showSnackBar('Image downloaded successfully');
+        },
+        onError: (error) {
+          _hideDownloadIndicator();
+          _showErrorSnackBar('Failed to download image: $error');
         },
       ),
     );
   }
 
-  Widget _buildMessageRow() {
-    return Row(
-      mainAxisAlignment: widget.isFromCurrentUser
-          ? MainAxisAlignment.end
-          : MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        // Avatar for non-current user
-        if (!widget.isFromCurrentUser && widget.showAvatar) _buildAvatar(),
-
-        // Message content
-        Flexible(
-          child: GestureDetector(
-            onTap: () => _handleTap(),
-            onLongPress: () => _handleLongPress(),
-            onDoubleTap: () => _handleDoubleTap(),
-            child: Container(
-              decoration: BoxDecoration(
-                color: widget.isSelected
-                    ? Colors.blue.withOpacity(0.1)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                crossAxisAlignment: widget.isFromCurrentUser
-                    ? CrossAxisAlignment.end
-                    : CrossAxisAlignment.start,
-                children: [
-                  // Sender name (for group chats)
-                  if (widget.showSenderName && !widget.isFromCurrentUser)
-                    _buildSenderName(),
-
-                  // Reply preview
-                  if (widget.message.isReply) _buildReplyPreview(),
-
-                  // Message bubble
-                  _buildMessageBubble(),
-
-                  // Reactions
-                  if (widget.message.hasReactions) _buildReactions(),
-
-                  // Timestamp and status
-                  if (widget.showTimestamp) _buildTimestampAndStatus(),
-                ],
-              ),
-            ),
-          ),
-        ),
-
-        // Avatar for current user (optional)
-        if (widget.isFromCurrentUser && widget.showAvatar) _buildAvatar(),
-      ],
+  Widget _buildVideoMessage() {
+    return ClipRRect(
+      borderRadius: _getBubbleBorderRadius(),
+      child: VideoMessageWidget(
+        message: widget.message,
+        isCurrentUser: widget.isFromCurrentUser,
+        maxWidth: MediaQuery.of(context).size.width * 0.75,
+        maxHeight: 400,
+        autoPlay: false,
+        showControls: true,
+        allowFullScreen: true,
+        onDownloadStart: _showDownloadIndicator,
+        onDownloadComplete: () {
+          _hideDownloadIndicator();
+          _showSnackBar('Video downloaded successfully');
+        },
+        onError: (error) {
+          _hideDownloadIndicator();
+          _showErrorSnackBar('Failed to load video: $error');
+        },
+      ),
     );
   }
 
+  Widget _buildAudioMessage() {
+    return Padding(
+      padding: const EdgeInsets.all(8),
+      child: AudioMessageWidget(
+        message: widget.message,
+        isCurrentUser: widget.isFromCurrentUser,
+        maxWidth: MediaQuery.of(context).size.width * 0.75,
+        autoPlay: false,
+        onDownloadStart: _showDownloadIndicator,
+        onDownloadComplete: () {
+          _hideDownloadIndicator();
+          _showSnackBar('Audio downloaded successfully');
+        },
+        onError: (error) {
+          _hideDownloadIndicator();
+          _showErrorSnackBar('Failed to load audio: $error');
+        },
+      ),
+    );
+  }
+
+  Widget _buildDocumentMessage() {
+    return Padding(
+      padding: const EdgeInsets.all(8),
+      child: DocumentMessageWidget(
+        message: widget.message,
+        isCurrentUser: widget.isFromCurrentUser,
+        maxWidth: MediaQuery.of(context).size.width * 0.75,
+        onDownloadStart: _showDownloadIndicator,
+        onDownloadComplete: () {
+          _hideDownloadIndicator();
+          _showSnackBar('Document downloaded successfully');
+        },
+        onError: (error) {
+          _hideDownloadIndicator();
+          _showErrorSnackBar('Failed to download document: $error');
+        },
+      ),
+    );
+  }
+
+  Widget _buildVoiceNoteMessage() {
+    return Padding(
+      padding: const EdgeInsets.all(8),
+      child: AudioMessageWidget(
+        message: widget.message,
+        isCurrentUser: widget.isFromCurrentUser,
+        maxWidth: MediaQuery.of(context).size.width * 0.75,
+        autoPlay: false,
+        onDownloadStart: _showDownloadIndicator,
+        onDownloadComplete: () {
+          _hideDownloadIndicator();
+          _showSnackBar('Voice note downloaded successfully');
+        },
+        onError: (error) {
+          _hideDownloadIndicator();
+          _showErrorSnackBar('Failed to load voice note: $error');
+        },
+      ),
+    );
+  }
+
+  Widget _buildLocationMessage() {
+    return LocationMessageWidget(
+      message: widget.message,
+      isCurrentUser: widget.isFromCurrentUser,
+      maxWidth: MediaQuery.of(context).size.width * 0.75,
+      mapHeight: 200,
+      onLocationShared: () {
+        _showSnackBar('Location shared successfully');
+        _trackLocationShared();
+      },
+      onError: (error) {
+        _showErrorSnackBar('Location error: $error');
+      },
+    );
+  }
+
+  Widget _buildContactMessage() {
+    return Padding(
+      padding: const EdgeInsets.all(8),
+      child: ContactMessageWidget(
+        message: widget.message,
+        isCurrentUser: widget.isFromCurrentUser,
+        maxWidth: MediaQuery.of(context).size.width * 0.75,
+        onContactSaved: () {
+          _showSnackBar('Contact saved to your phone');
+          _trackContactSaved();
+        },
+        onError: (error) {
+          _showErrorSnackBar('Failed to save contact: $error');
+        },
+      ),
+    );
+  }
+
+  Widget _buildStickerMessage() {
+    return Container(
+      width: 120,
+      height: 120,
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
+      child: widget.message.mediaUrl != null
+          ? CachedNetworkImage(
+              imageUrl: widget.message.mediaUrl!,
+              fit: BoxFit.contain,
+              placeholder: (context, url) => Container(
+                color: Colors.grey[200],
+                child: const Icon(Icons.image, size: 48, color: Colors.grey),
+              ),
+              errorWidget: (context, url, error) => Container(
+                color: Colors.grey[200],
+                child: const Icon(
+                  Icons.broken_image,
+                  size: 48,
+                  color: Colors.grey,
+                ),
+              ),
+            )
+          : Container(
+              color: Colors.grey[200],
+              child: const Icon(Icons.image, size: 48, color: Colors.grey),
+            ),
+    );
+  }
+
+  Widget _buildGifMessage() {
+    return ClipRRect(
+      borderRadius: _getBubbleBorderRadius(),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 200, maxHeight: 200),
+        child: widget.message.mediaUrl != null
+            ? CachedNetworkImage(
+                imageUrl: widget.message.mediaUrl!,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => Container(
+                  color: Colors.grey[200],
+                  child: const Icon(Icons.gif, size: 48, color: Colors.grey),
+                ),
+                errorWidget: (context, url, error) => Container(
+                  color: Colors.grey[200],
+                  child: const Icon(
+                    Icons.broken_image,
+                    size: 48,
+                    color: Colors.grey,
+                  ),
+                ),
+              )
+            : Container(
+                color: Colors.grey[200],
+                child: const Icon(Icons.gif, size: 48, color: Colors.grey),
+              ),
+      ),
+    );
+  }
+
+  Widget _buildSystemMessage() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Text(
+        widget.message.content,
+        style: TextStyle(
+          fontSize: 14,
+          color: Colors.grey[600],
+          fontStyle: FontStyle.italic,
+        ),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+
+  Widget _buildDeletedMessage() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.block, size: 16, color: Colors.grey[500]),
+          const SizedBox(width: 6),
+          Text(
+            'This message was deleted',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[500],
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextMessage() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSelectableText(widget.message.content),
+          if (widget.message.isEdited) _buildEditedIndicator(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSelectableText(String text) {
+    return SelectableText(
+      text,
+      style: TextStyle(
+        fontSize: 16,
+        color: widget.isFromCurrentUser ? Colors.white : Colors.black87,
+      ),
+      onTap: () => _handleTap(),
+    );
+  }
+
+  Widget _buildEditedIndicator() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Text(
+        'edited',
+        style: TextStyle(
+          fontSize: 11,
+          color: widget.isFromCurrentUser ? Colors.white70 : Colors.grey[500],
+          fontStyle: FontStyle.italic,
+        ),
+      ),
+    );
+  }
+
+  // Message Content Router
+  Widget _buildMessageContent() {
+    if (widget.message.isDeleted) {
+      return _buildDeletedMessage();
+    }
+
+    switch (widget.message.type) {
+      case MessageType.text:
+        return _buildTextMessage();
+      case MessageType.image:
+        return _buildImageMessage();
+      case MessageType.video:
+        return _buildVideoMessage();
+      case MessageType.audio:
+        return _buildAudioMessage();
+      case MessageType.document:
+        return _buildDocumentMessage();
+      case MessageType.voiceNote:
+        return _buildVoiceNoteMessage();
+      case MessageType.location:
+        return _buildLocationMessage();
+      case MessageType.contact:
+        return _buildContactMessage();
+      case MessageType.sticker:
+        return _buildStickerMessage();
+      case MessageType.gif:
+        return _buildGifMessage();
+      default:
+        return _buildSystemMessage();
+    }
+  }
+
+  // UI Components
   Widget _buildAvatar() {
     return Container(
       width: 32,
@@ -178,8 +464,6 @@ class _MessageBubbleWidgetState extends ConsumerState<MessageBubbleWidget>
   }
 
   Widget _getAvatarWidget() {
-    // In a real implementation, you'd get the sender's avatar
-    // from the message or user provider
     final senderName = widget.message.senderName ?? 'Unknown';
 
     return Container(
@@ -253,243 +537,6 @@ class _MessageBubbleWidgetState extends ConsumerState<MessageBubbleWidget>
     );
   }
 
-  Widget _buildMessageBubble() {
-    return Container(
-      constraints: BoxConstraints(
-        maxWidth: MediaQuery.of(context).size.width * 0.75,
-      ),
-      decoration: BoxDecoration(
-        color: _getBubbleColor(),
-        borderRadius: _getBubbleBorderRadius(),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 2,
-            offset: const Offset(0, 1),
-          ),
-        ],
-      ),
-      child: _buildMessageContent(),
-    );
-  }
-
-  Widget _buildMessageContent() {
-    if (widget.message.isDeleted) {
-      return _buildDeletedMessage();
-    }
-
-    switch (widget.message.type) {
-      case MessageType.text:
-        return _buildTextMessage();
-      case MessageType.image:
-        return _buildImageMessage();
-      case MessageType.video:
-        return _buildVideoMessage();
-      case MessageType.audio:
-        return _buildAudioMessage();
-      case MessageType.document:
-        return _buildDocumentMessage();
-      case MessageType.voiceNote:
-        return _buildVoiceNoteMessage();
-      case MessageType.location:
-        return _buildLocationMessage();
-      case MessageType.contact:
-        return _buildContactMessage();
-      case MessageType.sticker:
-        return _buildStickerMessage();
-      case MessageType.gif:
-        return _buildGifMessage();
-      default:
-        return _buildSystemMessage();
-    }
-  }
-
-  Widget _buildTextMessage() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSelectableText(widget.message.content),
-          if (widget.message.isEdited) _buildEditedIndicator(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSelectableText(String text) {
-    // Handle mentions and links
-    return SelectableText(
-      text,
-      style: TextStyle(
-        fontSize: 16,
-        color: widget.isFromCurrentUser ? Colors.white : Colors.black87,
-      ),
-      onTap: () => _handleTap(),
-    );
-  }
-
-  Widget _buildEditedIndicator() {
-    return Padding(
-      padding: const EdgeInsets.only(top: 4),
-      child: Text(
-        'edited',
-        style: TextStyle(
-          fontSize: 11,
-          color: widget.isFromCurrentUser ? Colors.white70 : Colors.grey[500],
-          fontStyle: FontStyle.italic,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildImageMessage() {
-    return ClipRRect(
-      borderRadius: _getBubbleBorderRadius(),
-      child: ImageMessageWidget(
-        imageUrl: widget.message.mediaUrl,
-        metadata: widget.message.metadata,
-        caption: widget.message.content.isNotEmpty
-            ? widget.message.content
-            : null,
-      ),
-    );
-  }
-
-  Widget _buildVideoMessage() {
-    return ClipRRect(
-      borderRadius: _getBubbleBorderRadius(),
-      child: VideoMessageWidget(
-        videoUrl: widget.message.mediaUrl,
-        metadata: widget.message.metadata,
-        caption: widget.message.content.isNotEmpty
-            ? widget.message.content
-            : null,
-      ),
-    );
-  }
-
-  Widget _buildAudioMessage() {
-    return Padding(
-      padding: const EdgeInsets.all(8),
-      child: AudioMessageWidget(
-        audioUrl: widget.message.mediaUrl,
-        metadata: widget.message.metadata,
-        isFromCurrentUser: widget.isFromCurrentUser,
-      ),
-    );
-  }
-
-  Widget _buildDocumentMessage() {
-    return Padding(
-      padding: const EdgeInsets.all(8),
-      child: DocumentMessageWidget(
-        documentUrl: widget.message.mediaUrl,
-        metadata: widget.message.metadata,
-        isFromCurrentUser: widget.isFromCurrentUser,
-      ),
-    );
-  }
-
-  Widget _buildVoiceNoteMessage() {
-    return Padding(
-      padding: const EdgeInsets.all(8),
-      child: VoiceNotePlayerWidget(
-        audioUrl: widget.message.mediaUrl!,
-        duration: _getVoiceNoteDuration(),
-        isFromCurrentUser: widget.isFromCurrentUser,
-      ),
-    );
-  }
-
-  Widget _buildLocationMessage() {
-    return LocationMessageWidget(
-      metadata: widget.message.metadata,
-      isFromCurrentUser: widget.isFromCurrentUser,
-    );
-  }
-
-  Widget _buildContactMessage() {
-    return Padding(
-      padding: const EdgeInsets.all(8),
-      child: ContactMessageWidget(
-        metadata: widget.message.metadata,
-        isFromCurrentUser: widget.isFromCurrentUser,
-      ),
-    );
-  }
-
-  Widget _buildStickerMessage() {
-    return Container(
-      width: 120,
-      height: 120,
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
-      child: widget.message.mediaUrl != null
-          ? CachedNetworkImage(
-              imageUrl: widget.message.mediaUrl!,
-              fit: BoxFit.contain,
-            )
-          : Container(
-              color: Colors.grey[200],
-              child: const Icon(Icons.image, size: 48, color: Colors.grey),
-            ),
-    );
-  }
-
-  Widget _buildGifMessage() {
-    return ClipRRect(
-      borderRadius: _getBubbleBorderRadius(),
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 200, maxHeight: 200),
-        child: widget.message.mediaUrl != null
-            ? CachedNetworkImage(
-                imageUrl: widget.message.mediaUrl!,
-                fit: BoxFit.cover,
-              )
-            : Container(
-                color: Colors.grey[200],
-                child: const Icon(Icons.gif, size: 48, color: Colors.grey),
-              ),
-      ),
-    );
-  }
-
-  Widget _buildSystemMessage() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Text(
-        widget.message.content,
-        style: TextStyle(
-          fontSize: 14,
-          color: Colors.grey[600],
-          fontStyle: FontStyle.italic,
-        ),
-        textAlign: TextAlign.center,
-      ),
-    );
-  }
-
-  Widget _buildDeletedMessage() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.block, size: 16, color: Colors.grey[500]),
-          const SizedBox(width: 6),
-          Text(
-            'This message was deleted',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[500],
-              fontStyle: FontStyle.italic,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildReactions() {
     final reactions = widget.message.reactions;
     if (reactions.isEmpty) return const SizedBox.shrink();
@@ -547,7 +594,6 @@ class _MessageBubbleWidgetState extends ConsumerState<MessageBubbleWidget>
             _formatTimestamp(widget.message.createdAt),
             style: TextStyle(fontSize: 11, color: Colors.grey[500]),
           ),
-
           if (widget.isFromCurrentUser) ...[
             const SizedBox(width: 4),
             _buildMessageStatusIcon(),
@@ -587,16 +633,91 @@ class _MessageBubbleWidgetState extends ConsumerState<MessageBubbleWidget>
     return Icon(icon, size: 14, color: color);
   }
 
-  Color _getBubbleColor() {
-    if (widget.message.isDeleted) {
-      return Colors.grey[200]!;
-    }
+  Widget _buildMessageBubble() {
+    return Container(
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.of(context).size.width * 0.75,
+      ),
+      decoration: BoxDecoration(
+        color: _getBubbleColor(),
+        borderRadius: _getBubbleBorderRadius(),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: _buildMessageContent(),
+    );
+  }
 
-    if (widget.isFromCurrentUser) {
-      return Theme.of(context).primaryColor;
-    } else {
-      return Colors.grey[100]!;
+  Widget _buildMessageRow() {
+    return Row(
+      mainAxisAlignment: widget.isFromCurrentUser
+          ? MainAxisAlignment.end
+          : MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        // Avatar for non-current user
+        if (!widget.isFromCurrentUser && widget.showAvatar) _buildAvatar(),
+
+        // Message content
+        Flexible(
+          child: GestureDetector(
+            onTap: () => _handleTap(),
+            onLongPress: () => _handleLongPress(),
+            onDoubleTap: () => _handleDoubleTap(),
+            child: Container(
+              decoration: BoxDecoration(
+                color: widget.isSelected
+                    ? Colors.blue.withOpacity(0.1)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: widget.isFromCurrentUser
+                    ? CrossAxisAlignment.end
+                    : CrossAxisAlignment.start,
+                children: [
+                  // Sender name (for group chats)
+                  if (widget.showSenderName && !widget.isFromCurrentUser)
+                    _buildSenderName(),
+
+                  // Reply preview
+                  if (widget.message.isReply) _buildReplyPreview(),
+
+                  // Message bubble
+                  _buildMessageBubble(),
+
+                  // Reactions
+                  if (widget.message.hasReactions) _buildReactions(),
+
+                  // Timestamp and status
+                  if (widget.showTimestamp) _buildTimestampAndStatus(),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        // Avatar for current user (optional)
+        if (widget.isFromCurrentUser && widget.showAvatar) _buildAvatar(),
+      ],
+    );
+  }
+
+  // Helper Functions
+  Duration _getVoiceNoteDuration() {
+    final metadata = widget.message.metadata;
+    if (metadata != null && metadata['voice_note'] != null) {
+      final voiceData = metadata['voice_note'] as Map<String, dynamic>;
+      if (voiceData['duration'] != null) {
+        return Duration(seconds: voiceData['duration'] as int);
+      }
     }
+    return const Duration(seconds: 0);
   }
 
   BorderRadius _getBubbleBorderRadius() {
@@ -620,8 +741,19 @@ class _MessageBubbleWidgetState extends ConsumerState<MessageBubbleWidget>
     }
   }
 
+  Color _getBubbleColor() {
+    if (widget.message.isDeleted) {
+      return Colors.grey[200]!;
+    }
+
+    if (widget.isFromCurrentUser) {
+      return Theme.of(context).primaryColor;
+    } else {
+      return Colors.grey[100]!;
+    }
+  }
+
   Color _getSenderNameColor() {
-    // Generate a consistent color based on sender name
     final colors = [
       Colors.red,
       Colors.pink,
@@ -679,14 +811,11 @@ class _MessageBubbleWidgetState extends ConsumerState<MessageBubbleWidget>
     final difference = now.difference(timestamp);
 
     if (difference.inDays == 0) {
-      // Today - show time
       return '${timestamp.hour.toString().padLeft(2, '0')}:'
           '${timestamp.minute.toString().padLeft(2, '0')}';
     } else if (difference.inDays == 1) {
-      // Yesterday
       return 'Yesterday';
     } else {
-      // Older - show date
       return '${timestamp.day}/${timestamp.month}';
     }
   }
@@ -709,26 +838,18 @@ class _MessageBubbleWidgetState extends ConsumerState<MessageBubbleWidget>
         return '📍 Location';
       case MessageType.contact:
         return '👤 Contact';
+      case MessageType.sticker:
+        return '😄 Sticker';
+      case MessageType.gif:
+        return '🎬 GIF';
       default:
         return 'Message';
     }
   }
 
-  Duration _getVoiceNoteDuration() {
-    // Extract duration from metadata or default
-    final metadata = widget.message.metadata;
-    if (metadata != null && metadata['duration'] != null) {
-      return Duration(seconds: metadata['duration'] as int);
-    }
-    return const Duration(seconds: 0);
-  }
-
+  // Event Handlers
   void _handleTap() {
-    if (widget.isSelected) {
-      // Handle selection mode tap
-    } else {
-      // Handle normal tap
-    }
+    widget.onTap?.call();
   }
 
   void _handleLongPress() {
@@ -736,19 +857,17 @@ class _MessageBubbleWidgetState extends ConsumerState<MessageBubbleWidget>
       _animationController.reverse();
     });
 
+    HapticFeedback.mediumImpact();
     widget.onLongPress?.call();
     _showMessageOptions();
   }
 
   void _handleDoubleTap() {
     widget.onDoubleTap?.call();
-
-    // Show quick reactions
     _showQuickReactions();
   }
 
   void _handleReactionTap(String emoji) {
-    // Toggle reaction
     widget.onReaction?.call(emoji);
   }
 
@@ -796,13 +915,19 @@ class _MessageBubbleWidgetState extends ConsumerState<MessageBubbleWidget>
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: quickReactions.map((emoji) {
-                    return ShadButton.raw(
-                      onPressed: () {
+                    return InkWell(
+                      onTap: () {
                         Navigator.pop(context);
                         widget.onReaction?.call(emoji);
                       },
-                      variant: ShadButtonVariant.ghost,
-                      child: Text(emoji, style: const TextStyle(fontSize: 24)),
+                      borderRadius: BorderRadius.circular(20),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Text(
+                          emoji,
+                          style: const TextStyle(fontSize: 24),
+                        ),
+                      ),
                     );
                   }).toList(),
                 ),
@@ -813,9 +938,31 @@ class _MessageBubbleWidgetState extends ConsumerState<MessageBubbleWidget>
       ),
     );
   }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.only(
+        left: widget.isFromCurrentUser ? 60 : 8,
+        right: widget.isFromCurrentUser ? 8 : 60,
+        top: 2,
+        bottom: 2,
+      ),
+      child: AnimatedBuilder(
+        animation: _scaleAnimation,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _scaleAnimation.value,
+            child: _buildMessageRow(),
+          );
+        },
+      ),
+    );
+  }
 }
 
-class _MessageOptionsSheet extends ConsumerWidget {
+// Message Options Sheet Widget
+class _MessageOptionsSheet extends StatelessWidget {
   final MessageModel message;
   final bool isFromCurrentUser;
   final VoidCallback? onReply;
@@ -835,7 +982,7 @@ class _MessageOptionsSheet extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -860,13 +1007,16 @@ class _MessageOptionsSheet extends ConsumerWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: ['👍', '❤️', '😂', '😮', '😢', '😡'].map((emoji) {
-                return ShadButton.raw(
-                  onPressed: () {
+                return InkWell(
+                  onTap: () {
                     Navigator.pop(context);
                     onReaction?.call(emoji);
                   },
-                  variant: ShadButtonVariant.ghost,
-                  child: Text(emoji, style: const TextStyle(fontSize: 24)),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Text(emoji, style: const TextStyle(fontSize: 24)),
+                  ),
                 );
               }).toList(),
             ),
@@ -876,6 +1026,7 @@ class _MessageOptionsSheet extends ConsumerWidget {
 
           // Action options
           _buildOption(
+            context,
             icon: Icons.reply,
             title: 'Reply',
             onTap: () {
@@ -885,6 +1036,7 @@ class _MessageOptionsSheet extends ConsumerWidget {
           ),
 
           _buildOption(
+            context,
             icon: Icons.forward,
             title: 'Forward',
             onTap: () {
@@ -894,16 +1046,21 @@ class _MessageOptionsSheet extends ConsumerWidget {
           ),
 
           _buildOption(
+            context,
             icon: Icons.copy,
             title: 'Copy',
             onTap: () {
               Navigator.pop(context);
-              _copyMessage();
+              Clipboard.setData(ClipboardData(text: message.content));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Message copied to clipboard')),
+              );
             },
           ),
 
           if (isFromCurrentUser && message.type == MessageType.text) ...[
             _buildOption(
+              context,
               icon: Icons.edit,
               title: 'Edit',
               onTap: () {
@@ -915,6 +1072,7 @@ class _MessageOptionsSheet extends ConsumerWidget {
 
           if (isFromCurrentUser) ...[
             _buildOption(
+              context,
               icon: Icons.delete,
               title: 'Delete',
               onTap: () {
@@ -931,7 +1089,8 @@ class _MessageOptionsSheet extends ConsumerWidget {
     );
   }
 
-  Widget _buildOption({
+  Widget _buildOption(
+    BuildContext context, {
     required IconData icon,
     required String title,
     required VoidCallback onTap,
@@ -947,31 +1106,26 @@ class _MessageOptionsSheet extends ConsumerWidget {
     );
   }
 
-  void _copyMessage() {
-    Clipboard.setData(ClipboardData(text: message.content));
-  }
-
   void _confirmDelete(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => ShadDialog(
+      builder: (context) => AlertDialog(
         title: const Text('Delete Message'),
+        content: const Text('Are you sure you want to delete this message?'),
         actions: [
-          ShadButton.raw(
+          TextButton(
             onPressed: () => Navigator.pop(context),
-            variant: ShadButtonVariant.outline,
             child: const Text('Cancel'),
           ),
-          ShadButton.raw(
+          TextButton(
             onPressed: () {
               Navigator.pop(context);
               onDelete?.call();
             },
-            variant: ShadButtonVariant.destructive,
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Delete'),
           ),
         ],
-        child: const Text('Are you sure you want to delete this message?'),
       ),
     );
   }

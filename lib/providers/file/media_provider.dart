@@ -284,42 +284,22 @@ class MediaNotifier extends StateNotifier<AsyncValue<MediaState>> {
 
   Future<void> _loadRecentMedia() async {
     try {
-      final cachedMedia = await _cacheService.getCachedMedia();
+      // Use the correct method name that returns List<Map<String, dynamic>>
+      final cachedMediaList = await _cacheService.getCachedMediaList();
       final mediaList = <MediaFile>[];
 
-      // Add type checking and validation
-      if (cachedMedia is List) {
-        for (final item in cachedMedia) {
-          try {
-            // Ensure each item is a Map before processing
-            if (item is Map<String, dynamic>) {
-              final mediaFile = MediaFile.fromJson(item);
-              mediaList.add(mediaFile);
-            } else if (item is Map) {
-              // Convert Map to Map<String, dynamic> if needed
-              final convertedMap = Map<String, dynamic>.from(item);
-              final mediaFile = MediaFile.fromJson(convertedMap);
-              mediaList.add(mediaFile);
-            } else {
-              if (kDebugMode) {
-                print(
-                  '⚠️ Skipping invalid media item type: ${item.runtimeType}',
-                );
-              }
-            }
-          } catch (e) {
-            if (kDebugMode) {
-              print('⚠️ Error parsing media item: $e');
-            }
-            // Continue with other items instead of failing completely
+      // Process the cached media list
+      for (final item in cachedMediaList) {
+        try {
+          // item should already be Map<String, dynamic> from getCachedMediaList
+          final mediaFile = MediaFile.fromJson(item);
+          mediaList.add(mediaFile);
+        } catch (e) {
+          if (kDebugMode) {
+            print('⚠️ Error parsing media item: $e');
           }
+          // Continue with other items instead of failing completely
         }
-      } else {
-        if (kDebugMode) {
-          print('⚠️ Cached media is not a List: ${cachedMedia.runtimeType}');
-        }
-        // Clear corrupted cache
-        await _cacheService.clearMediaCache();
       }
 
       // Sort by creation date, most recent first

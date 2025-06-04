@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:open_file/open_file.dart';
 import 'package:mime/mime.dart';
 
+import '../../core/utils/snackbar_utils.dart';
 import '../../models/chat/message_model.dart';
 import '../../models/file/file_model.dart';
 import '../../providers/file/file_provider.dart';
@@ -132,8 +133,10 @@ class _DocumentMessageWidgetState extends ConsumerState<DocumentMessageWidget>
     if (widget.message.mediaUrl == null) return;
 
     try {
-      final fileProvider = ref.read(fileProvider.notifier);
-      final files = fileProvider.files;
+      final fileNotifier = ref.read(
+        fileProvider.notifier,
+      ); // ✅ Renamed from fileProvider to fileNotifier
+      final files = fileNotifier.files;
 
       final fileInfo = files.values.firstWhere(
         (file) => file.url == widget.message.mediaUrl,
@@ -179,10 +182,14 @@ class _DocumentMessageWidgetState extends ConsumerState<DocumentMessageWidget>
         throw Exception('File ID not found in message metadata');
       }
 
-      final fileProvider = ref.read(fileProvider.notifier);
+      final fileNotifier = ref.read(
+        fileProvider.notifier,
+      ); // ✅ Renamed from fileProvider to fileNotifier
 
       // Listen to download progress
-      final fileInfo = await fileProvider.downloadFile(fileId);
+      final fileInfo = await fileNotifier.downloadFile(
+        fileId,
+      ); // ✅ Updated reference
 
       if (mounted) {
         setState(() {
