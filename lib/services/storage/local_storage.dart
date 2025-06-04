@@ -909,4 +909,34 @@ class LocalStorage {
       }
     }
   }
+  Future<bool> setMap(String key, Map<String, dynamic> value) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonString = jsonEncode(value);
+    return await prefs.setString(key, jsonString);
+  } catch (e) {
+    if (kDebugMode) {
+      print('❌ Error setting map: $e');
+    }
+    return false;
+  }
+}
+
+// Get a Map from JSON string
+Map<String, dynamic>? getMap(String key) {
+  try {
+    final prefs = _prefs;
+    if (prefs == null) return null;
+    
+    final jsonString = prefs.getString(key);
+    if (jsonString == null) return null;
+    
+    return Map<String, dynamic>.from(jsonDecode(jsonString));
+  } catch (e) {
+    if (kDebugMode) {
+      print('❌ Error getting map: $e');
+    }
+    return null;
+  }
+}
 }

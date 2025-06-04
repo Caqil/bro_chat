@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bro_chat/models/call/call_model.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
@@ -6,6 +7,7 @@ import '../../core/config/app_config.dart';
 import '../storage/cache_service.dart';
 import '../storage/secure_storage.dart';
 import 'websocket_service.dart';
+import '../../models/call/call_participant.dart';
 
 enum CallState {
   idle,
@@ -20,11 +22,9 @@ enum CallState {
   rejected,
 }
 
-enum CallType { voice, video, group, screen }
-
 enum CallDirection { incoming, outgoing }
 
-enum MediaState { enabled, disabled, unavailable }
+enum CameraPosition { front, back }
 
 class CallSocketService {
   static CallSocketService? _instance;
@@ -199,7 +199,7 @@ class CallSocketService {
       final callData = event.data;
       final callId = callData['call_id'] as String;
       final chatId = callData['chat_id'] as String;
-      final callType = _parseCallType(callData['type'] as String?);
+      final callType = CallType.fromString(callData['type'] as String?);
       final initiatorId = callData['initiator_id'] as String;
       final participantIds = List<String>.from(
         callData['participant_ids'] ?? [],
@@ -351,8 +351,21 @@ class CallSocketService {
       final participant = _participants.remove(userId);
 
       if (participant != null) {
-        participant.status = ParticipantStatus.left;
-        _participantController.add(participant);
+        final updatedParticipant = CallParticipant(
+          userId: participant.userId,
+          name: participant.name,
+          avatar: participant.avatar,
+          status: ParticipantStatus.left,
+          joinedAt: participant.joinedAt,
+          leftAt: DateTime.now(),
+          mediaState: participant.mediaState,
+          deviceInfo: participant.deviceInfo,
+          isMuted: participant.isMuted,
+          isVideoEnabled: participant.isVideoEnabled,
+          isScreenSharing: participant.isScreenSharing,
+          quality: participant.quality,
+        );
+        _participantController.add(updatedParticipant);
 
         if (kDebugMode) {
           print('👥 Participant left: $userId');
@@ -426,11 +439,31 @@ class CallSocketService {
 
       final participant = _participants[userId];
       if (participant != null) {
-        if (audioEnabled != null) participant.audioEnabled = audioEnabled;
-        if (videoEnabled != null) participant.videoEnabled = videoEnabled;
-        if (screenSharing != null) participant.screenSharing = screenSharing;
+        final updatedMediaState = MediaState(
+          audioEnabled: audioEnabled ?? participant.mediaState.audioEnabled,
+          videoEnabled: videoEnabled ?? participant.mediaState.videoEnabled,
+          screenSharing: screenSharing ?? participant.mediaState.screenSharing,
+          audioDevice: participant.mediaState.audioDevice,
+          videoDevice: participant.mediaState.videoDevice,
+        );
 
-        _participantController.add(participant);
+        final updatedParticipant = CallParticipant(
+          userId: participant.userId,
+          name: participant.name,
+          avatar: participant.avatar,
+          status: participant.status,
+          joinedAt: participant.joinedAt,
+          leftAt: participant.leftAt,
+          mediaState: updatedMediaState,
+          deviceInfo: participant.deviceInfo,
+          isMuted: audioEnabled == false,
+          isVideoEnabled: videoEnabled ?? false,
+          isScreenSharing: screenSharing ?? false,
+          quality: participant.quality,
+        );
+
+        _participants[userId] = updatedParticipant;
+        _participantController.add(updatedParticipant);
 
         if (kDebugMode) {
           print(
@@ -459,7 +492,7 @@ class CallSocketService {
       _callQualityController.add(quality);
 
       if (kDebugMode) {
-        print('📊 Call quality: ${quality.overallScore}/5');
+        print('📊 Call quality: ${quality.qualityScore}/5');
       }
     } catch (e) {
       if (kDebugMode) {
@@ -519,7 +552,7 @@ class CallSocketService {
       final callData = {
         'chat_id': chatId,
         'participant_ids': participantIds,
-        'type': type.name,
+        'type': type.value,
         'video_enabled': videoEnabled,
         'audio_enabled': audioEnabled,
       };
@@ -1001,8 +1034,8 @@ class CallSocketService {
           // Send quality update
           if (_currentCallId != null) {
             _webSocketService.updateCallMedia(_currentCallId!, {
-              'quality_score': quality.overallScore,
-              'rtt': quality.roundTripTime,
+              'quality_score': quality.qualityScore,
+              'rtt': quality.rtt,
               'jitter': quality.jitter,
               'packet_loss': quality.packetLoss,
             });
@@ -1053,27 +1086,31 @@ class CallSocketService {
 
       if (rtt > 300) {
         score -= 1;
-      } else if (rtt > 150)
+      } else if (rtt > 150) {
         score -= 0.5;
+      }
 
       if (jitter > 50) {
         score -= 1;
-      } else if (jitter > 30)
+      } else if (jitter > 30) {
         score -= 0.5;
+      }
 
       if (packetLoss > 0.05) {
         score -= 1;
-      } else if (packetLoss > 0.02)
+      } else if (packetLoss > 0.02) {
         score -= 0.5;
+      }
 
       score = score.clamp(1.0, 5.0);
 
       return CallQuality(
-        overallScore: score,
-        roundTripTime: rtt,
-        jitter: jitter,
+        qualityScore: score,
+        rtt: rtt.round(),
+        jitter: jitter.round(),
         packetLoss: packetLoss,
-        timestamp: DateTime.now(),
+        bandwidth: 0, // This would need to be calculated from stats
+        networkType: 'unknown', // This would need to be detected
       );
     } catch (e) {
       if (kDebugMode) {
@@ -1144,21 +1181,6 @@ class CallSocketService {
     }
   }
 
-  CallType _parseCallType(String? type) {
-    switch (type) {
-      case 'voice':
-        return CallType.voice;
-      case 'video':
-        return CallType.video;
-      case 'group':
-        return CallType.group;
-      case 'screen':
-        return CallType.screen;
-      default:
-        return CallType.voice;
-    }
-  }
-
   String? _getCurrentUserId() {
     // This would typically come from your authentication service
     // For now, return null
@@ -1176,7 +1198,7 @@ class CallSocketService {
       final callData = {
         'id': _currentCallId,
         'chat_id': _currentChatId,
-        'type': _currentCallType.name,
+        'type': _currentCallType.value,
         'direction': _currentDirection?.name,
         'start_time': _callStartTime!.toIso8601String(),
         'end_time': DateTime.now().toIso8601String(),
@@ -1185,7 +1207,7 @@ class CallSocketService {
         'participants': _participants.values.map((p) => p.toJson()).toList(),
         'quality_avg': _qualityHistory.isNotEmpty
             ? _qualityHistory
-                      .map((q) => q.overallScore)
+                      .map((q) => q.qualityScore)
                       .reduce((a, b) => a + b) /
                   _qualityHistory.length
             : null,
@@ -1208,7 +1230,7 @@ class CallSocketService {
   }
 }
 
-// Data models
+// Service-specific models (not duplicated in models folder)
 enum CallEventType {
   incomingCall,
   callAnswered,
@@ -1239,101 +1261,6 @@ class CallEvent {
     this.data,
   });
 }
-
-class CallQuality {
-  final double overallScore; // 1-5
-  final double roundTripTime; // ms
-  final double jitter; // ms
-  final double packetLoss; // 0-1
-  final DateTime timestamp;
-
-  CallQuality({
-    required this.overallScore,
-    required this.roundTripTime,
-    required this.jitter,
-    required this.packetLoss,
-    required this.timestamp,
-  });
-
-  factory CallQuality.fromJson(Map<String, dynamic> json) {
-    return CallQuality(
-      overallScore: (json['overall_score'] as num).toDouble(),
-      roundTripTime: (json['round_trip_time'] as num).toDouble(),
-      jitter: (json['jitter'] as num).toDouble(),
-      packetLoss: (json['packet_loss'] as num).toDouble(),
-      timestamp: DateTime.parse(json['timestamp']),
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'overall_score': overallScore,
-      'round_trip_time': roundTripTime,
-      'jitter': jitter,
-      'packet_loss': packetLoss,
-      'timestamp': timestamp.toIso8601String(),
-    };
-  }
-}
-
-enum ParticipantStatus { joining, connected, disconnected, left }
-
-class CallParticipant {
-  final String userId;
-  final String? userName;
-  final String? avatarUrl;
-  ParticipantStatus status;
-  bool audioEnabled;
-  bool videoEnabled;
-  bool screenSharing;
-  DateTime joinedAt;
-  DateTime? leftAt;
-
-  CallParticipant({
-    required this.userId,
-    this.userName,
-    this.avatarUrl,
-    this.status = ParticipantStatus.joining,
-    this.audioEnabled = true,
-    this.videoEnabled = false,
-    this.screenSharing = false,
-    required this.joinedAt,
-    this.leftAt,
-  });
-
-  factory CallParticipant.fromJson(Map<String, dynamic> json) {
-    return CallParticipant(
-      userId: json['user_id'],
-      userName: json['user_name'],
-      avatarUrl: json['avatar_url'],
-      status: ParticipantStatus.values.firstWhere(
-        (s) => s.name == json['status'],
-        orElse: () => ParticipantStatus.joining,
-      ),
-      audioEnabled: json['audio_enabled'] ?? true,
-      videoEnabled: json['video_enabled'] ?? false,
-      screenSharing: json['screen_sharing'] ?? false,
-      joinedAt: DateTime.parse(json['joined_at']),
-      leftAt: json['left_at'] != null ? DateTime.parse(json['left_at']) : null,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'user_id': userId,
-      'user_name': userName,
-      'avatar_url': avatarUrl,
-      'status': status.name,
-      'audio_enabled': audioEnabled,
-      'video_enabled': videoEnabled,
-      'screen_sharing': screenSharing,
-      'joined_at': joinedAt.toIso8601String(),
-      if (leftAt != null) 'left_at': leftAt!.toIso8601String(),
-    };
-  }
-}
-
-enum CameraPosition { front, back }
 
 // Riverpod providers
 final callSocketServiceProvider = Provider<CallSocketService>((ref) {

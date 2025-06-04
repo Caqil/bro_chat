@@ -672,6 +672,31 @@ class CacheService {
     }
   }
 
+  Future<dynamic> getCachedData(String key) async {
+    try {
+      final box = _getBox(_generalBox);
+      final entryJson = box.get(key);
+
+      if (entryJson == null) {
+        return null;
+      }
+
+      final entry = CacheEntry.fromJson(entryJson);
+
+      if (entry.isExpired) {
+        await box.delete(key);
+        return null;
+      }
+
+      return entry.data;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error getting cached data: $e');
+      }
+      return null;
+    }
+  }
+
   Future<void> clearCache([String? boxName]) async {
     try {
       if (boxName != null) {

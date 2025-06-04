@@ -508,9 +508,7 @@ class PermissionUtils {
         return 'Permission permanently denied. Please enable in settings.';
       case PermissionStatus.provisional:
         return 'Permission granted provisionally';
-      default:
-        return 'Unknown permission status';
-    }
+      }
   }
 
   // Check if we should show permission rationale

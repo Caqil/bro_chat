@@ -11,7 +11,7 @@ class MessageModel {
   final MessageModel? replyToMessage;
   final List<String> mentions;
   final List<MessageReaction> reactions;
-  final MessageStatus status;
+  final MessageStatusType status;
   final bool isEdited;
   final bool isDeleted;
   final bool isForwarded;
@@ -35,7 +35,7 @@ class MessageModel {
     this.replyToMessage,
     this.mentions = const [],
     this.reactions = const [],
-    this.status = MessageStatus.sent,
+    this.status = MessageStatusType.sent,
     this.isEdited = false,
     this.isDeleted = false,
     this.isForwarded = false,
@@ -65,7 +65,7 @@ class MessageModel {
       reactions: (json['reactions'] as List? ?? [])
           .map((e) => MessageReaction.fromJson(e))
           .toList(),
-      status: MessageStatus.fromString(json['status']),
+      status: MessageStatusType.fromString(json['status']),
       isEdited: json['is_edited'] ?? false,
       isDeleted: json['is_deleted'] ?? false,
       isForwarded: json['is_forwarded'] ?? false,
@@ -213,7 +213,7 @@ enum MessageType {
   }
 }
 
-enum MessageStatus {
+enum MessageStatusType {
   sending,
   sent,
   delivered,
@@ -222,20 +222,20 @@ enum MessageStatus {
 
   String get value => name;
 
-  static MessageStatus fromString(String? value) {
+  static MessageStatusType fromString(String? value) {
     switch (value) {
       case 'sending':
-        return MessageStatus.sending;
+        return MessageStatusType.sending;
       case 'sent':
-        return MessageStatus.sent;
+        return MessageStatusType.sent;
       case 'delivered':
-        return MessageStatus.delivered;
+        return MessageStatusType.delivered;
       case 'read':
-        return MessageStatus.read;
+        return MessageStatusType.read;
       case 'failed':
-        return MessageStatus.failed;
+        return MessageStatusType.failed;
       default:
-        return MessageStatus.sent;
+        return MessageStatusType.sent;
     }
   }
 }

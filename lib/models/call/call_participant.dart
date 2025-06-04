@@ -96,42 +96,6 @@ enum ParticipantStatus {
   }
 }
 
-class MediaState {
-  final bool audioEnabled;
-  final bool videoEnabled;
-  final bool screenSharing;
-  final String? audioDevice;
-  final String? videoDevice;
-
-  MediaState({
-    this.audioEnabled = true,
-    this.videoEnabled = false,
-    this.screenSharing = false,
-    this.audioDevice,
-    this.videoDevice,
-  });
-
-  factory MediaState.fromJson(Map<String, dynamic> json) {
-    return MediaState(
-      audioEnabled: json['audio_enabled'] ?? true,
-      videoEnabled: json['video_enabled'] ?? false,
-      screenSharing: json['screen_sharing'] ?? false,
-      audioDevice: json['audio_device'],
-      videoDevice: json['video_device'],
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'audio_enabled': audioEnabled,
-      'video_enabled': videoEnabled,
-      'screen_sharing': screenSharing,
-      if (audioDevice != null) 'audio_device': audioDevice,
-      if (videoDevice != null) 'video_device': videoDevice,
-    };
-  }
-}
-
 class DeviceInfo {
   final String platform;
   final String? browser;

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:bro_chat/services/api/auth_api.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +9,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/config/dio_config.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/exceptions/network_exception.dart';
+import '../../models/auth/user_model.dart';
+import '../../models/call/call_model.dart';
+import '../../models/chat/chat_model.dart';
+import '../../models/chat/message_model.dart';
+import '../../models/common/api_response.dart';
+import '../../models/file/file_model.dart';
+import '../../models/group/group_member.dart';
+import '../../models/group/group_model.dart';
 import '../storage/cache_service.dart';
 import '../storage/secure_storage.dart';
 
@@ -702,7 +711,7 @@ class ApiService {
     }
   }
 
-  Future<ApiResponse<List<GroupMemberModel>>> getGroupMembers(
+  Future<ApiResponse<List<GroupMember>>> getGroupMembers(
     String groupId,
   ) async {
     try {
@@ -710,7 +719,7 @@ class ApiService {
       return ApiResponse.fromJson(
         response.data,
         (data) => (data as List)
-            .map((member) => GroupMemberModel.fromJson(member))
+            .map((member) => GroupMember.fromJson(member))
             .toList(),
       );
     } catch (e) {
@@ -1322,35 +1331,6 @@ class ApiService {
   }
 }
 
-// Generic API Response model
-class ApiResponse<T> {
-  final bool success;
-  final String message;
-  final T? data;
-  final Map<String, dynamic>? meta;
-
-  ApiResponse({
-    required this.success,
-    required this.message,
-    this.data,
-    this.meta,
-  });
-
-  factory ApiResponse.fromJson(
-    Map<String, dynamic> json,
-    T? Function(dynamic)? fromJsonT,
-  ) {
-    return ApiResponse<T>(
-      success: json['success'] ?? false,
-      message: json['message'] ?? '',
-      data: json['data'] != null && fromJsonT != null
-          ? fromJsonT(json['data'])
-          : json['data'],
-      meta: json['meta'],
-    );
-  }
-}
-
 // Riverpod provider
 final apiServiceProvider = Provider<ApiService>((ref) {
   return ApiService();
@@ -1377,260 +1357,3 @@ class AuthResponse {
   }
 }
 
-class UserModel {
-  final String id;
-  final String name;
-  final String phoneNumber;
-  final String? email;
-  final String? username;
-  final String? bio;
-  final String? avatar;
-  final bool isOnline;
-  final DateTime? lastSeen;
-
-  UserModel({
-    required this.id,
-    required this.name,
-    required this.phoneNumber,
-    this.email,
-    this.username,
-    this.bio,
-    this.avatar,
-    this.isOnline = false,
-    this.lastSeen,
-  });
-
-  factory UserModel.fromJson(Map<String, dynamic> json) {
-    return UserModel(
-      id: json['id'],
-      name: json['name'],
-      phoneNumber: json['phone_number'],
-      email: json['email'],
-      username: json['username'],
-      bio: json['bio'],
-      avatar: json['avatar'],
-      isOnline: json['is_online'] ?? false,
-      lastSeen: json['last_seen'] != null
-          ? DateTime.parse(json['last_seen'])
-          : null,
-    );
-  }
-}
-
-class ChatModel {
-  final String id;
-  final String type;
-  final String? name;
-  final String? description;
-  final List<String> participants;
-  final DateTime createdAt;
-  final DateTime? lastMessageAt;
-
-  ChatModel({
-    required this.id,
-    required this.type,
-    this.name,
-    this.description,
-    required this.participants,
-    required this.createdAt,
-    this.lastMessageAt,
-  });
-
-  factory ChatModel.fromJson(Map<String, dynamic> json) {
-    return ChatModel(
-      id: json['id'],
-      type: json['type'],
-      name: json['name'],
-      description: json['description'],
-      participants: List<String>.from(json['participants'] ?? []),
-      createdAt: DateTime.parse(json['created_at']),
-      lastMessageAt: json['last_message_at'] != null
-          ? DateTime.parse(json['last_message_at'])
-          : null,
-    );
-  }
-}
-
-class MessageModel {
-  final String id;
-  final String chatId;
-  final String senderId;
-  final String type;
-  final String content;
-  final DateTime createdAt;
-  final DateTime? editedAt;
-  final String? replyToId;
-  final List<String> mentions;
-  final Map<String, dynamic>? metadata;
-
-  MessageModel({
-    required this.id,
-    required this.chatId,
-    required this.senderId,
-    required this.type,
-    required this.content,
-    required this.createdAt,
-    this.editedAt,
-    this.replyToId,
-    this.mentions = const [],
-    this.metadata,
-  });
-
-  factory MessageModel.fromJson(Map<String, dynamic> json) {
-    return MessageModel(
-      id: json['id'],
-      chatId: json['chat_id'],
-      senderId: json['sender_id'],
-      type: json['type'],
-      content: json['content'],
-      createdAt: DateTime.parse(json['created_at']),
-      editedAt: json['edited_at'] != null
-          ? DateTime.parse(json['edited_at'])
-          : null,
-      replyToId: json['reply_to_id'],
-      mentions: List<String>.from(json['mentions'] ?? []),
-      metadata: json['metadata'],
-    );
-  }
-}
-
-class GroupModel {
-  final String id;
-  final String name;
-  final String? description;
-  final bool isPublic;
-  final String? avatar;
-  final DateTime createdAt;
-
-  GroupModel({
-    required this.id,
-    required this.name,
-    this.description,
-    required this.isPublic,
-    this.avatar,
-    required this.createdAt,
-  });
-
-  factory GroupModel.fromJson(Map<String, dynamic> json) {
-    return GroupModel(
-      id: json['id'],
-      name: json['name'],
-      description: json['description'],
-      isPublic: json['is_public'] ?? false,
-      avatar: json['avatar'],
-      createdAt: DateTime.parse(json['created_at']),
-    );
-  }
-}
-
-class GroupMemberModel {
-  final String userId;
-  final String role;
-  final DateTime joinedAt;
-
-  GroupMemberModel({
-    required this.userId,
-    required this.role,
-    required this.joinedAt,
-  });
-
-  factory GroupMemberModel.fromJson(Map<String, dynamic> json) {
-    return GroupMemberModel(
-      userId: json['user_id'],
-      role: json['role'],
-      joinedAt: DateTime.parse(json['joined_at']),
-    );
-  }
-}
-
-class CallModel {
-  final String id;
-  final String chatId;
-  final String type;
-  final String status;
-  final List<String> participants;
-  final DateTime createdAt;
-  final DateTime? endedAt;
-
-  CallModel({
-    required this.id,
-    required this.chatId,
-    required this.type,
-    required this.status,
-    required this.participants,
-    required this.createdAt,
-    this.endedAt,
-  });
-
-  factory CallModel.fromJson(Map<String, dynamic> json) {
-    return CallModel(
-      id: json['id'],
-      chatId: json['chat_id'],
-      type: json['type'],
-      status: json['status'],
-      participants: List<String>.from(json['participants'] ?? []),
-      createdAt: DateTime.parse(json['created_at']),
-      endedAt: json['ended_at'] != null
-          ? DateTime.parse(json['ended_at'])
-          : null,
-    );
-  }
-}
-
-class FileModel {
-  final String id;
-  final String name;
-  final String mimeType;
-  final int size;
-  final String purpose;
-  final String url;
-  final DateTime createdAt;
-
-  FileModel({
-    required this.id,
-    required this.name,
-    required this.mimeType,
-    required this.size,
-    required this.purpose,
-    required this.url,
-    required this.createdAt,
-  });
-
-  factory FileModel.fromJson(Map<String, dynamic> json) {
-    return FileModel(
-      id: json['id'],
-      name: json['name'],
-      mimeType: json['mime_type'],
-      size: json['size'],
-      purpose: json['purpose'],
-      url: json['url'],
-      createdAt: DateTime.parse(json['created_at']),
-    );
-  }
-}
-
-class DeviceModel {
-  final String id;
-  final String name;
-  final String platform;
-  final DateTime lastSeen;
-  final bool isActive;
-
-  DeviceModel({
-    required this.id,
-    required this.name,
-    required this.platform,
-    required this.lastSeen,
-    required this.isActive,
-  });
-
-  factory DeviceModel.fromJson(Map<String, dynamic> json) {
-    return DeviceModel(
-      id: json['id'],
-      name: json['name'],
-      platform: json['platform'],
-      lastSeen: DateTime.parse(json['last_seen']),
-      isActive: json['is_active'] ?? false,
-    );
-  }
-}
