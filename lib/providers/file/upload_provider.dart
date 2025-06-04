@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:bro_chat/models/file/file_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';

@@ -33,7 +33,7 @@ enum ImageFilterType {
   saturation,
 }
 
-class ImageInfo {
+class ImageDataInfo {
   final String path;
   final String name;
   final int width;
@@ -44,7 +44,7 @@ class ImageInfo {
   final DateTime? modifiedAt;
   final Map<String, dynamic>? metadata;
 
-  ImageInfo({
+  ImageDataInfo({
     required this.path,
     required this.name,
     required this.width,
@@ -75,8 +75,8 @@ class ImageInfo {
     };
   }
 
-  factory ImageInfo.fromJson(Map<String, dynamic> json) {
-    return ImageInfo(
+  factory ImageDataInfo.fromJson(Map<String, dynamic> json) {
+    return ImageDataInfo(
       path: json['path'],
       name: json['name'],
       width: json['width'],
@@ -152,13 +152,13 @@ class ImageService {
   final FilePickerService _filePickerService;
 
   // Image cache
-  final Map<String, ImageInfo> _imageInfoCache = {};
+  final Map<String, ImageDataInfo> _imageInfoCache = {};
   final Map<String, Uint8List> _imageBytesCache = {};
   final Map<String, String> _thumbnailCache = {};
 
   // Event streams
-  final StreamController<ImageInfo> _imageProcessedController =
-      StreamController<ImageInfo>.broadcast();
+  final StreamController<ImageDataInfo> _imageProcessedController =
+      StreamController<ImageDataInfo>.broadcast();
 
   // Processing queue
   final List<Future<void>> _processingQueue = [];
@@ -177,7 +177,7 @@ class ImageService {
   }
 
   // Streams
-  Stream<ImageInfo> get imageProcessedStream =>
+  Stream<ImageDataInfo> get imageProcessedStream =>
       _imageProcessedController.stream;
 
   void _initialize() {
@@ -190,7 +190,7 @@ class ImageService {
       if (cacheData != null && cacheData is Map) {
         _imageInfoCache.clear();
         for (final entry in cacheData.entries) {
-          _imageInfoCache[entry.key] = ImageInfo.fromJson(entry.value);
+          _imageInfoCache[entry.key] = ImageDataInfo.fromJson(entry.value);
         }
       }
 
@@ -220,7 +220,7 @@ class ImageService {
 
   // Public API
 
-  Future<ImageInfo?> getImageInfo(String imagePath) async {
+  Future<ImageDataInfo?> getImageInfo(String imagePath) async {
     try {
       // Check cache first
       if (_imageInfoCache.containsKey(imagePath)) {
@@ -243,7 +243,7 @@ class ImageService {
       final fileName = imagePath.split('/').last;
       final format = _getImageFormatFromExtension(fileName);
 
-      final imageInfo = ImageInfo(
+      final imageInfo = ImageDataInfo(
         path: imagePath,
         name: fileName,
         width: image.width,
@@ -1016,7 +1016,7 @@ final imageServiceProvider = Provider<ImageService>((ref) {
   return ImageService();
 });
 
-final imageProcessedProvider = StreamProvider<ImageInfo>((ref) {
+final imageProcessedProvider = StreamProvider<ImageDataInfo>((ref) {
   final service = ref.watch(imageServiceProvider);
   return service.imageProcessedStream;
 });

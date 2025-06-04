@@ -124,6 +124,7 @@ enum FilePurpose {
   groupAvatar,
   document,
   voiceNote,
+  other,
   status;
 
   String get value => name;
@@ -140,6 +141,8 @@ enum FilePurpose {
         return FilePurpose.document;
       case 'voice_note':
         return FilePurpose.voiceNote;
+      case 'other':
+        return FilePurpose.other;
       case 'status':
         return FilePurpose.status;
       default:
@@ -154,6 +157,7 @@ enum FileStatus {
   processing,
   ready,
   failed,
+  cancelled,
   deleted;
 
   String get value => name;
@@ -170,6 +174,8 @@ enum FileStatus {
         return FileStatus.ready;
       case 'failed':
         return FileStatus.failed;
+      case 'cancelled':
+        return FileStatus.cancelled;
       case 'deleted':
         return FileStatus.deleted;
       default:
@@ -182,8 +188,9 @@ enum FileType {
   image,
   video,
   audio,
-  document;
+  document,
+  archive,
+  other;
 
   String get value => name;
 }
-

@@ -224,7 +224,38 @@ enum MessageType {
   memberAdded,
   memberRemoved,
   callStarted,
-  callEnded;
+  callEnded,
+  messageReceived,
+  messageRead,
+  messageDelivered,
+  messageDeleted,
+  messageEdited,
+  userTyping,
+  userStoppedTyping,
+  userOnline,
+  userOffline,
+  userLastSeen,
+  chatCreated,
+  chatDeleted,
+  chatArchived,
+  chatMuted,
+  participantAdded,
+  participantRemoved,
+  groupUpdated,
+  memberRoleChanged,
+  callInitiated,
+  callAnswered,
+  callJoined,
+  callLeft,
+  callRinging,
+  callBusy,
+  fileUploaded,
+  fileDeleted,
+  systemMaintenance,
+  systemBroadcast,
+  tokenExpired,
+  sessionTerminated,
+  unknown;
 
   String get value {
     switch (this) {
@@ -260,6 +291,68 @@ enum MessageType {
         return 'call_started';
       case MessageType.callEnded:
         return 'call_ended';
+      case MessageType.messageReceived:
+        return 'message_received';
+      case MessageType.messageRead:
+        return 'message_read';
+      case MessageType.messageDelivered:
+        return 'message_delivered';
+      case MessageType.messageDeleted:
+        return 'message_deleted';
+      case MessageType.messageEdited:
+        return 'message_edited';
+      case MessageType.userTyping:
+        return 'user_typing';
+      case MessageType.userStoppedTyping:
+        return 'user_stopped_typing';
+      case MessageType.userOnline:
+        return 'user_online';
+      case MessageType.userOffline:
+        return 'user_offline';
+      case MessageType.userLastSeen:
+        return 'user_last_seen';
+      case MessageType.chatCreated:
+        return 'chat_created';
+      case MessageType.chatDeleted:
+        return 'chat_deleted';
+      case MessageType.chatArchived:
+        return 'chat_archived';
+      case MessageType.chatMuted:
+        return 'chat_muted';
+      case MessageType.participantAdded:
+        return 'participant_added';
+      case MessageType.participantRemoved:
+        return 'participant_removed';
+      case MessageType.groupUpdated:
+        return 'group_updated';
+      case MessageType.memberRoleChanged:
+        return 'member_role_changed';
+      case MessageType.callInitiated:
+        return 'call_initiated';
+      case MessageType.callAnswered:
+        return 'call_answered';
+      case MessageType.callJoined:
+        return 'call_joined';
+      case MessageType.callLeft:
+        return 'call_left';
+      case MessageType.callRinging:
+        return 'call_ringing';
+      case MessageType.callBusy:
+        return 'call_busy';
+      case MessageType.fileUploaded:
+        return 'file_uploaded';
+      case MessageType.fileDeleted:
+        return 'file_deleted';
+      case MessageType.systemMaintenance:
+        return 'system_maintenance';
+      case MessageType.systemBroadcast:
+        return 'system_broadcast';
+      case MessageType.tokenExpired:
+        return 'token_expired';
+      case MessageType.sessionTerminated:
+        return 'session_terminated';
+      case MessageType.unknown:
+        return 'unknown';
     }
   }
 
@@ -297,8 +390,70 @@ enum MessageType {
         return MessageType.callStarted;
       case 'call_ended':
         return MessageType.callEnded;
+      case 'message_received':
+        return MessageType.messageReceived;
+      case 'message_read':
+        return MessageType.messageRead;
+      case 'message_delivered':
+        return MessageType.messageDelivered;
+      case 'message_deleted':
+        return MessageType.messageDeleted;
+      case 'message_edited':
+        return MessageType.messageEdited;
+      case 'user_typing':
+        return MessageType.userTyping;
+      case 'user_stopped_typing':
+        return MessageType.userStoppedTyping;
+      case 'user_online':
+        return MessageType.userOnline;
+      case 'user_offline':
+        return MessageType.userOffline;
+      case 'user_last_seen':
+        return MessageType.userLastSeen;
+      case 'chat_created':
+        return MessageType.chatCreated;
+      case 'chat_deleted':
+        return MessageType.chatDeleted;
+      case 'chat_archived':
+        return MessageType.chatArchived;
+      case 'chat_muted':
+        return MessageType.chatMuted;
+      case 'participant_added':
+        return MessageType.participantAdded;
+      case 'participant_removed':
+        return MessageType.participantRemoved;
+      case 'group_updated':
+        return MessageType.groupUpdated;
+      case 'member_role_changed':
+        return MessageType.memberRoleChanged;
+      case 'call_initiated':
+        return MessageType.callInitiated;
+      case 'call_answered':
+        return MessageType.callAnswered;
+      case 'call_joined':
+        return MessageType.callJoined;
+      case 'call_left':
+        return MessageType.callLeft;
+      case 'call_ringing':
+        return MessageType.callRinging;
+      case 'call_busy':
+        return MessageType.callBusy;
+      case 'file_uploaded':
+        return MessageType.fileUploaded;
+      case 'file_deleted':
+        return MessageType.fileDeleted;
+      case 'system_maintenance':
+        return MessageType.systemMaintenance;
+      case 'system_broadcast':
+        return MessageType.systemBroadcast;
+      case 'token_expired':
+        return MessageType.tokenExpired;
+      case 'session_terminated':
+        return MessageType.sessionTerminated;
+      case 'unknown':
+        return MessageType.unknown;
       default:
-        return MessageType.text;
+        return MessageType.unknown;
     }
   }
 }

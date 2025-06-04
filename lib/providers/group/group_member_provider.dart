@@ -2,14 +2,13 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
 
+import '../../models/group/group_member.dart';
 import '../../services/api/api_service.dart';
 import '../../services/storage/cache_service.dart';
 import '../../services/websocket/websocket_event_types.dart';
 import '../../services/websocket/chat_socket.dart';
 
 enum MemberRole { owner, admin, moderator, member, guest }
-
-enum MemberStatus { active, muted, banned, suspended, left, removed, pending }
 
 enum MemberPermission {
   canSendMessages,
@@ -34,8 +33,8 @@ class GroupMemberInfo {
   final String? avatar;
   final String? email;
   final String? phone;
-  final MemberRole role;
-  final MemberStatus status;
+  final GroupRole role;
+  final GroupMemberStatus status;
   final Set<MemberPermission> permissions;
   final DateTime joinedAt;
   final DateTime? lastActiveAt;
@@ -57,8 +56,8 @@ class GroupMemberInfo {
     this.avatar,
     this.email,
     this.phone,
-    this.role = MemberRole.member,
-    this.status = MemberStatus.active,
+    this.role = GroupRole.member,
+    this.status = GroupMemberStatus.active,
     this.permissions = const {},
     DateTime? joinedAt,
     this.lastActiveAt,
@@ -81,8 +80,8 @@ class GroupMemberInfo {
     String? avatar,
     String? email,
     String? phone,
-    MemberRole? role,
-    MemberStatus? status,
+    GroupRole? role,
+    GroupMemberStatus? status,
     Set<MemberPermission>? permissions,
     DateTime? joinedAt,
     DateTime? lastActiveAt,
@@ -127,12 +126,12 @@ class GroupMemberInfo {
   bool get canManageMembers => isAdmin;
   bool get canManageGroup => isOwner;
   bool get isMuted =>
-      status == MemberStatus.muted ||
+      status == GroupMemberStatus.muted ||
       (mutedUntil != null && DateTime.now().isBefore(mutedUntil!));
   bool get isBanned =>
-      status == MemberStatus.banned ||
+      status == GroupMemberStatus.banned ||
       (bannedUntil != null && DateTime.now().isBefore(bannedUntil!));
-  bool get isActive => status == MemberStatus.active && !isMuted && !isBanned;
+  bool get isActive => status == GroupMemberStatus.active && !isMuted && !isBanned;
 
   bool hasPermission(MemberPermission permission) {
     if (isOwner) return true; // Owner has all permissions
@@ -142,16 +141,14 @@ class GroupMemberInfo {
   String get displayName => customTitle != null ? '$name ($customTitle)' : name;
   String get roleDisplayName {
     switch (role) {
-      case MemberRole.owner:
+      case GroupRole.owner:
         return 'Owner';
-      case MemberRole.admin:
+      case GroupRole.admin:
         return 'Admin';
-      case MemberRole.moderator:
+      case GroupRole.moderator:
         return 'Moderator';
-      case MemberRole.member:
+      case GroupRole.member:
         return 'Member';
-      case MemberRole.guest:
-        return 'Guest';
     }
   }
 
@@ -204,13 +201,13 @@ class GroupMemberInfo {
       avatar: json['avatar'],
       email: json['email'],
       phone: json['phone'],
-      role: MemberRole.values.firstWhere(
+      role: GroupRole.values.firstWhere(
         (r) => r.name == json['role'],
-        orElse: () => MemberRole.member,
+        orElse: () => GroupRole.member,
       ),
-      status: MemberStatus.values.firstWhere(
+      status: GroupMemberStatus.values.firstWhere(
         (s) => s.name == json['status'],
-        orElse: () => MemberStatus.active,
+        orElse: () => GroupMemberStatus.active,
       ),
       permissions: permissions,
       joinedAt: DateTime.tryParse(json['joined_at'] ?? '') ?? DateTime.now(),
@@ -245,7 +242,7 @@ class GroupMemberState {
   final DateTime? lastFetchTime;
   final String searchQuery;
   final MemberRole? roleFilter;
-  final MemberStatus? statusFilter;
+  final GroupMemberStatus? statusFilter;
   final int page;
 
   GroupMemberState({
@@ -274,7 +271,7 @@ class GroupMemberState {
     DateTime? lastFetchTime,
     String? searchQuery,
     MemberRole? roleFilter,
-    MemberStatus? statusFilter,
+    GroupMemberStatus? statusFilter,
     int? page,
   }) {
     return GroupMemberState(
@@ -691,7 +688,7 @@ class GroupMemberNotifier extends StateNotifier<AsyncValue<GroupMemberState>> {
     }
   }
 
-  Future<void> updateMemberRole(String userId, MemberRole newRole) async {
+  Future<void> updateMemberRole(String userId, GroupRole newRole) async {
     try {
       final response = await _apiService.updateGroupMemberRole(
         groupId,
@@ -751,7 +748,7 @@ class GroupMemberNotifier extends StateNotifier<AsyncValue<GroupMemberState>> {
               memberState.members,
             );
             updatedMembers[userId] = member.copyWith(
-              status: MemberStatus.muted,
+              status: GroupMemberStatus.muted,
               mutedUntil: mutedUntil,
               muteReason: reason,
             );
@@ -785,7 +782,7 @@ class GroupMemberNotifier extends StateNotifier<AsyncValue<GroupMemberState>> {
               memberState.members,
             );
             updatedMembers[userId] = member.copyWith(
-              status: MemberStatus.active,
+              status: GroupMemberStatus.active,
               mutedUntil: null,
               muteReason: null,
             );
@@ -832,7 +829,7 @@ class GroupMemberNotifier extends StateNotifier<AsyncValue<GroupMemberState>> {
               memberState.members,
             );
             updatedMembers[userId] = member.copyWith(
-              status: MemberStatus.banned,
+              status: GroupMemberStatus.banned,
               bannedUntil: bannedUntil,
               banReason: reason,
             );
@@ -866,7 +863,7 @@ class GroupMemberNotifier extends StateNotifier<AsyncValue<GroupMemberState>> {
               memberState.members,
             );
             updatedMembers[userId] = member.copyWith(
-              status: MemberStatus.active,
+              status: GroupMemberStatus.active,
               bannedUntil: null,
               banReason: null,
             );
@@ -938,7 +935,7 @@ class GroupMemberNotifier extends StateNotifier<AsyncValue<GroupMemberState>> {
     });
   }
 
-  void setStatusFilter(MemberStatus? status) {
+  void setStatusFilter(GroupMemberStatus? status) {
     state.whenData((memberState) {
       state = AsyncValue.data(memberState.copyWith(statusFilter: status));
     });

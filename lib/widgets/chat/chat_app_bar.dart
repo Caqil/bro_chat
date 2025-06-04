@@ -396,12 +396,12 @@ class ChatAppBarWidget extends ConsumerWidget implements PreferredSizeWidget {
         onAudioCall?.call();
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to start call: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(
+      //     content: Text('Failed to start call: $e'),
+      //     backgroundColor: Colors.red,
+      //   ),
+      // );
     }
   }
 

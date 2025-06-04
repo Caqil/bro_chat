@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:contacts_service/contacts_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geocoding/geocoding.dart';
@@ -10,7 +11,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../../services/api/api_service.dart';
-import '../../models/file/file_model.dart';
+import '../../models/file/file_model.dart' hide FileType;
 import '../../models/common/api_response.dart';
 import '../../providers/chat/message_provider.dart';
 

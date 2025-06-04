@@ -10,20 +10,6 @@ import '../../services/storage/cache_service.dart';
 import '../../models/file/file_model.dart';
 import '../../models/common/api_response.dart';
 
-enum FileType { image, video, audio, document, archive, other }
-
-enum FilePurpose {
-  message,
-  avatar,
-  groupAvatar,
-  statusUpdate,
-  callRecording,
-  voiceNote,
-  backup,
-  other,
-}
-
-enum FileStatus { uploading, uploaded, failed, cancelled, processing, ready }
 
 class FileInfo {
   final String id;

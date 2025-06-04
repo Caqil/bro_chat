@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:convert';
 import 'package:bro_chat/core/config/app_config.dart';
+import 'package:bro_chat/models/file/file_model.dart';
 import 'package:crypto/crypto.dart';
 import 'package:mime/mime.dart';
 import 'package:path/path.dart' as path;
@@ -192,7 +193,6 @@ class FileUtils {
     if (isAudio(filePath)) return FileType.audio;
     if (isDocument(filePath)) return FileType.document;
     if (isArchive(filePath)) return FileType.archive;
-    if (isCode(filePath)) return FileType.code;
     return FileType.other;
   }
 
@@ -210,8 +210,6 @@ class FileUtils {
         return '🎵';
       case FileType.archive:
         return '📦';
-      case FileType.code:
-        return '💻';
       case FileType.document:
         switch (extension) {
           case 'pdf':
@@ -242,7 +240,6 @@ class FileUtils {
       case FileType.audio:
       case FileType.document:
       case FileType.archive:
-      case FileType.code:
       case FileType.other:
         return bytes <= AppConfig.maxFileSize;
     }
@@ -699,51 +696,4 @@ class FileUtils {
       return '${(seconds / 3600).round()}h';
     }
   }
-}
-
-// File type enumeration
-enum FileType { image, video, audio, document, archive, code, other }
-
-// File info class
-class FileInfo {
-  final String path;
-  final String name;
-  final String extension;
-  final int size;
-  final DateTime modified;
-  final FileType type;
-  final String? mimeType;
-
-  FileInfo({
-    required this.path,
-    required this.name,
-    required this.extension,
-    required this.size,
-    required this.modified,
-    required this.type,
-    this.mimeType,
-  });
-
-  factory FileInfo.fromFile(File file) {
-    final stat = file.statSync();
-    final path = file.path;
-    final name = FileUtils.getFileName(path);
-    final extension = FileUtils.getFileExtension(path);
-    final type = FileUtils.getFileType(path);
-    final mimeType = FileUtils.getMimeType(path);
-
-    return FileInfo(
-      path: path,
-      name: name,
-      extension: extension,
-      size: stat.size,
-      modified: stat.modified,
-      type: type,
-      mimeType: mimeType,
-    );
-  }
-
-  String get formattedSize => FileUtils.formatFileSize(size);
-  String get icon => FileUtils.getFileIcon(path);
-  bool get isValid => FileUtils.isValidFileSize(size, type);
 }

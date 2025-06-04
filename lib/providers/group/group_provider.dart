@@ -915,10 +915,6 @@ final groupPrivacyProvider = Provider.family<GroupPrivacy, String>((
   return group?.privacy ?? GroupPrivacy.closed;
 });
 
-final groupMemberCountProvider = Provider.family<int, String>((ref, groupId) {
-  final group = ref.watch(groupDataProvider(groupId));
-  return group?.memberCount ?? 0;
-});
 
 final groupOwnerIdProvider = Provider.family<String, String>((ref, groupId) {
   final group = ref.watch(groupDataProvider(groupId));

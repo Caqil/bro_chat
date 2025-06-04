@@ -133,6 +133,7 @@ enum GroupMemberStatus {
   active,
   left,
   kicked,
+  muted,
   banned;
 
   String get value => name;
@@ -145,6 +146,8 @@ enum GroupMemberStatus {
         return GroupMemberStatus.left;
       case 'kicked':
         return GroupMemberStatus.kicked;
+      case 'muted':
+        return GroupMemberStatus.muted;
       case 'banned':
         return GroupMemberStatus.banned;
       default:

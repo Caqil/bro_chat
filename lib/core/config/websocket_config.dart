@@ -5,68 +5,12 @@ import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/status.dart' as status;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../models/chat/message_model.dart';
 import '../../services/storage/secure_storage.dart';
 import 'app_config.dart';
 
 enum WebSocketState { disconnected, connecting, connected, reconnecting, error }
 
-enum MessageType {
-  // Chat messages
-  messageReceived,
-  messageRead,
-  messageDelivered,
-  messageDeleted,
-  messageEdited,
-
-  // Typing indicators
-  userTyping,
-  userStoppedTyping,
-
-  // Presence
-  userOnline,
-  userOffline,
-  userLastSeen,
-
-  // Chat events
-  chatCreated,
-  chatDeleted,
-  chatArchived,
-  chatMuted,
-  participantAdded,
-  participantRemoved,
-
-  // Group events
-  groupCreated,
-  groupDeleted,
-  groupUpdated,
-  memberAdded,
-  memberRemoved,
-  memberRoleChanged,
-
-  // Call events
-  callInitiated,
-  callAnswered,
-  callEnded,
-  callJoined,
-  callLeft,
-  callRinging,
-  callBusy,
-
-  // File events
-  fileUploaded,
-  fileDeleted,
-
-  // System events
-  systemMaintenance,
-  systemBroadcast,
-
-  // Authentication events
-  tokenExpired,
-  sessionTerminated,
-
-  // Unknown
-  unknown,
-}
 
 class WebSocketMessage {
   final MessageType type;
