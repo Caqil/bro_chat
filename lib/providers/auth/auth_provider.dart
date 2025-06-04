@@ -2,13 +2,14 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../../core/config/dio_config.dart';
-import '../../core/services/storage/secure_storage.dart';
 import '../../models/auth/auth_response.dart';
+import '../../models/auth/user_model.dart';
 import '../../models/auth/login_request.dart';
 import '../../models/auth/register_request.dart';
 import '../../models/auth/otp_request.dart';
 import '../../models/common/api_response.dart';
 import '../../core/constants/api_constants.dart';
+import '../../services/storage/secure_storage.dart';
 import 'auth_state.dart';
 
 class AuthNotifier extends StateNotifier<AuthState> {
@@ -65,16 +66,28 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
 
       if (apiResponse.success && apiResponse.data != null) {
-        final authData = apiResponse.data!;
-        await _saveTokens(authData.accessToken, authData.refreshToken);
+        final authResponse = apiResponse.data!;
 
-        state = AuthState.authenticated(
-          user: authData.user,
-          accessToken: authData.accessToken,
-          refreshToken: authData.refreshToken,
-        );
-        _scheduleTokenRefresh();
-        return true;
+        // Check if we have valid auth data
+        if (authResponse.accessToken != null &&
+            authResponse.refreshToken != null &&
+            authResponse.user != null) {
+          await _saveTokens(
+            authResponse.accessToken!,
+            authResponse.refreshToken!,
+          );
+
+          state = AuthState.authenticated(
+            user: authResponse.user!,
+            accessToken: authResponse.accessToken!,
+            refreshToken: authResponse.refreshToken!,
+          );
+          _scheduleTokenRefresh();
+          return true;
+        } else {
+          state = AuthState.error('Invalid authentication data received');
+          return false;
+        }
       } else {
         state = AuthState.error(apiResponse.message);
         return false;
@@ -105,16 +118,28 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
 
       if (apiResponse.success && apiResponse.data != null) {
-        final authData = apiResponse.data!;
-        await _saveTokens(authData.accessToken, authData.refreshToken);
+        final authResponse = apiResponse.data!;
 
-        state = AuthState.authenticated(
-          user: authData.user,
-          accessToken: authData.accessToken,
-          refreshToken: authData.refreshToken,
-        );
-        _scheduleTokenRefresh();
-        return true;
+        // Check if we have valid auth data
+        if (authResponse.accessToken != null &&
+            authResponse.refreshToken != null &&
+            authResponse.user != null) {
+          await _saveTokens(
+            authResponse.accessToken!,
+            authResponse.refreshToken!,
+          );
+
+          state = AuthState.authenticated(
+            user: authResponse.user!,
+            accessToken: authResponse.accessToken!,
+            refreshToken: authResponse.refreshToken!,
+          );
+          _scheduleTokenRefresh();
+          return true;
+        } else {
+          state = AuthState.error('Invalid authentication data received');
+          return false;
+        }
       } else {
         state = AuthState.error(apiResponse.message);
         return false;
@@ -145,16 +170,28 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
 
       if (apiResponse.success && apiResponse.data != null) {
-        final authData = apiResponse.data!;
-        await _saveTokens(authData.accessToken, authData.refreshToken);
+        final authResponse = apiResponse.data!;
 
-        state = AuthState.authenticated(
-          user: authData.user,
-          accessToken: authData.accessToken,
-          refreshToken: authData.refreshToken,
-        );
-        _scheduleTokenRefresh();
-        return true;
+        // Check if we have valid auth data
+        if (authResponse.accessToken != null &&
+            authResponse.refreshToken != null &&
+            authResponse.user != null) {
+          await _saveTokens(
+            authResponse.accessToken!,
+            authResponse.refreshToken!,
+          );
+
+          state = AuthState.authenticated(
+            user: authResponse.user!,
+            accessToken: authResponse.accessToken!,
+            refreshToken: authResponse.refreshToken!,
+          );
+          _scheduleTokenRefresh();
+          return true;
+        } else {
+          state = AuthState.error('Invalid authentication data received');
+          return false;
+        }
       } else {
         state = AuthState.error(apiResponse.message);
         return false;
@@ -199,15 +236,24 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
 
       if (apiResponse.success && apiResponse.data != null) {
-        final authData = apiResponse.data!;
-        await _saveTokens(authData.accessToken, authData.refreshToken);
+        final authResponse = apiResponse.data!;
 
-        state = AuthState.authenticated(
-          user: authData.user,
-          accessToken: authData.accessToken,
-          refreshToken: authData.refreshToken,
-        );
-        return true;
+        // Check if we have valid auth data
+        if (authResponse.accessToken != null &&
+            authResponse.refreshToken != null &&
+            authResponse.user != null) {
+          await _saveTokens(
+            authResponse.accessToken!,
+            authResponse.refreshToken!,
+          );
+
+          state = AuthState.authenticated(
+            user: authResponse.user!,
+            accessToken: authResponse.accessToken!,
+            refreshToken: authResponse.refreshToken!,
+          );
+          return true;
+        }
       }
       return false;
     } catch (e) {

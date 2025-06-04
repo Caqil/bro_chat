@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:permission_handler/permission_handler.dart';
-import '../exceptions/permission_exception.dart';
+import '../exceptions/app_exception.dart';
 import '../constants/string_constants.dart';
 
 class PermissionUtils {
@@ -273,24 +273,6 @@ class PermissionUtils {
     }
   }
 
-  // Calendar permissions
-  static Future<bool> requestCalendarPermission() async {
-    try {
-      final status = await Permission.calendarReadWrite.request();
-      return status == PermissionStatus.granted;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  static Future<bool> hasCalendarPermission() async {
-    try {
-      final status = await Permission.calendarReadWrite.status;
-      return status == PermissionStatus.granted;
-    } catch (e) {
-      return false;
-    }
-  }
 
   // Bluetooth permissions
   static Future<bool> requestBluetoothPermission() async {
@@ -475,8 +457,6 @@ class PermissionUtils {
         return 'Phone';
       case Permission.sms:
         return 'SMS';
-      case Permission.calendarReadWrite:
-        return 'Calendar';
       case Permission.bluetooth:
         return 'Bluetooth';
       default:
@@ -506,8 +486,6 @@ class PermissionUtils {
         return 'Required to make and receive calls';
       case Permission.sms:
         return 'Required to verify your phone number';
-      case Permission.calendarReadWrite:
-        return 'Required to create events and reminders';
       case Permission.bluetooth:
         return 'Required to connect with nearby devices';
       default:

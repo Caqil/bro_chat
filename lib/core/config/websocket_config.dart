@@ -5,8 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/status.dart' as status;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../services/storage/secure_storage.dart';
 import 'app_config.dart';
-import '../services/storage/secure_storage.dart';
 
 enum WebSocketState { disconnected, connecting, connected, reconnecting, error }
 

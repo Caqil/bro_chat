@@ -18,6 +18,13 @@ class AuthResponse {
   Map<String, dynamic> toJson() {
     return {'success': success, 'message': message, 'data': data?.toJson()};
   }
+
+  // Convenience getters to access nested properties
+  String? get accessToken => data?.accessToken;
+  String? get refreshToken => data?.refreshToken;
+  UserModel? get user => data?.user;
+  int? get expiresIn => data?.expiresIn;
+  String? get tokenType => data?.tokenType;
 }
 
 class AuthData {

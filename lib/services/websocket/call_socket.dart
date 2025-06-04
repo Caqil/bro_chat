@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
@@ -1052,19 +1051,19 @@ class CallSocketService {
       // Calculate overall score (1-5)
       double score = 5.0;
 
-      if (rtt > 300)
+      if (rtt > 300) {
         score -= 1;
-      else if (rtt > 150)
+      } else if (rtt > 150)
         score -= 0.5;
 
-      if (jitter > 50)
+      if (jitter > 50) {
         score -= 1;
-      else if (jitter > 30)
+      } else if (jitter > 30)
         score -= 0.5;
 
-      if (packetLoss > 0.05)
+      if (packetLoss > 0.05) {
         score -= 1;
-      else if (packetLoss > 0.02)
+      } else if (packetLoss > 0.02)
         score -= 0.5;
 
       score = score.clamp(1.0, 5.0);

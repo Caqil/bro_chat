@@ -2,8 +2,8 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../services/storage/secure_storage.dart';
 import 'app_config.dart';
-import '../services/storage/secure_storage.dart';
 import '../exceptions/network_exception.dart';
 import '../exceptions/auth_exception.dart';
 
@@ -213,9 +213,9 @@ class _ErrorInterceptor extends Interceptor {
       case 400:
         return NetworkException.badRequest(message, errorCode);
       case 401:
-        return AuthException.unauthorized(message);
+        return NetworkException.unauthorized(message);
       case 403:
-        return AuthException.forbidden(message);
+        return NetworkException.forbidden(message);
       case 404:
         return NetworkException.notFound(message);
       case 409:

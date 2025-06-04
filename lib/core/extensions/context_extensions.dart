@@ -284,16 +284,6 @@ extension BuildContextExtensions on BuildContext {
     form?.reset();
   }
 
-  // Localization
-  Locale get locale =>
-      Localizations.of<MaterialLocalizations>(
-        context,
-        MaterialLocalizations,
-      )?.locale ??
-      const Locale('en', 'US');
-  String get languageCode => locale.languageCode;
-  String? get countryCode => locale.countryCode;
-
   // Date and time formatting
   String formatDateTime(DateTime dateTime) {
     return MaterialLocalizations.of(this).formatShortDate(dateTime);

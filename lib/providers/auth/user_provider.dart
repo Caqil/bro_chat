@@ -1,8 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import '../../core/config/dio_config.dart';
 import '../../models/auth/user_model.dart';
 import '../../models/common/api_response.dart';
 import '../../core/constants/api_constants.dart';
+import 'auth_provider.dart';
 
 class UserNotifier extends StateNotifier<AsyncValue<UserModel?>> {
   final Dio _dio;

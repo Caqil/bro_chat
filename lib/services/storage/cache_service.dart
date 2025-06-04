@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart';
-import '../exceptions/cache_exception.dart';
+import '../../core/exceptions/app_exception.dart';
 
 class CacheService {
   static CacheService? _instance;
