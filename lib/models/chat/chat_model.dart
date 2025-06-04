@@ -39,6 +39,45 @@ class ChatModel {
     required this.updatedAt,
   });
 
+  // Add copyWith method
+  ChatModel copyWith({
+    String? id,
+    String? name,
+    String? description,
+    ChatType? type,
+    String? avatar,
+    List<ParticipantModel>? participants,
+    MessageModel? lastMessage,
+    int? unreadCount,
+    bool? isArchived,
+    bool? isMuted,
+    bool? isPinned,
+    DateTime? mutedUntil,
+    ChatSettings? settings,
+    String? draftMessage,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return ChatModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      type: type ?? this.type,
+      avatar: avatar ?? this.avatar,
+      participants: participants ?? this.participants,
+      lastMessage: lastMessage ?? this.lastMessage,
+      unreadCount: unreadCount ?? this.unreadCount,
+      isArchived: isArchived ?? this.isArchived,
+      isMuted: isMuted ?? this.isMuted,
+      isPinned: isPinned ?? this.isPinned,
+      mutedUntil: mutedUntil ?? this.mutedUntil,
+      settings: settings ?? this.settings,
+      draftMessage: draftMessage ?? this.draftMessage,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
   factory ChatModel.fromJson(Map<String, dynamic> json) {
     return ChatModel(
       id: json['id'] ?? json['_id'] ?? '',

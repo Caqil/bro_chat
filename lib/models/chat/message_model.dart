@@ -47,6 +47,57 @@ class MessageModel {
     this.readReceipts = const [],
   });
 
+  // Add copyWith method
+  MessageModel copyWith({
+    String? id,
+    String? chatId,
+    String? senderId,
+    MessageType? type,
+    String? content,
+    String? mediaUrl,
+    String? thumbnailUrl,
+    Map<String, dynamic>? metadata,
+    String? replyToId,
+    MessageModel? replyToMessage,
+    List<String>? mentions,
+    List<MessageReaction>? reactions,
+    MessageStatusType? status,
+    bool? isEdited,
+    bool? isDeleted,
+    bool? isForwarded,
+    String? forwardedFromChatId,
+    String? forwardedFromUserId,
+    DateTime? scheduledAt,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    List<MessageReadReceipt>? readReceipts,
+  }) {
+    return MessageModel(
+      id: id ?? this.id,
+      chatId: chatId ?? this.chatId,
+      senderId: senderId ?? this.senderId,
+      type: type ?? this.type,
+      content: content ?? this.content,
+      mediaUrl: mediaUrl ?? this.mediaUrl,
+      thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
+      metadata: metadata ?? this.metadata,
+      replyToId: replyToId ?? this.replyToId,
+      replyToMessage: replyToMessage ?? this.replyToMessage,
+      mentions: mentions ?? this.mentions,
+      reactions: reactions ?? this.reactions,
+      status: status ?? this.status,
+      isEdited: isEdited ?? this.isEdited,
+      isDeleted: isDeleted ?? this.isDeleted,
+      isForwarded: isForwarded ?? this.isForwarded,
+      forwardedFromChatId: forwardedFromChatId ?? this.forwardedFromChatId,
+      forwardedFromUserId: forwardedFromUserId ?? this.forwardedFromUserId,
+      scheduledAt: scheduledAt ?? this.scheduledAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      readReceipts: readReceipts ?? this.readReceipts,
+    );
+  }
+
   factory MessageModel.fromJson(Map<String, dynamic> json) {
     return MessageModel(
       id: json['id'] ?? json['_id'] ?? '',

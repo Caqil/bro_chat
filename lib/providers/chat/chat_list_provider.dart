@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bro_chat/models/chat/message_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
 
@@ -7,6 +8,7 @@ import '../../services/websocket/chat_socket.dart';
 import '../../services/storage/cache_service.dart';
 import '../../models/chat/chat_model.dart';
 import '../../models/common/api_response.dart';
+import '../../services/websocket/websocket_event_types.dart';
 
 // Chat list filter
 enum ChatListFilter { all, unread, archived, pinned, muted }
@@ -153,7 +155,7 @@ class ChatListNotifier extends StateNotifier<AsyncValue<ChatListState>> {
   final CacheService _cacheService;
 
   StreamSubscription<ChatUpdate>? _chatUpdateSubscription;
-  StreamSubscription<ChatMessage>? _messageSubscription;
+  StreamSubscription<MessageModel>? _messageSubscription;
 
   Timer? _refreshTimer;
   Timer? _searchDebounceTimer;

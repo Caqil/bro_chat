@@ -37,6 +37,45 @@ class CallModel {
     required this.updatedAt,
   });
 
+  // Add copyWith method
+  CallModel copyWith({
+    String? id,
+    String? chatId,
+    String? initiatorId,
+    List<String>? participantIds,
+    CallType? type,
+    CallStatus? status,
+    DateTime? startedAt,
+    DateTime? endedAt,
+    Duration? duration,
+    String? endReason,
+    CallQuality? quality,
+    bool? isRecording,
+    String? recordingUrl,
+    CallSettings? settings,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return CallModel(
+      id: id ?? this.id,
+      chatId: chatId ?? this.chatId,
+      initiatorId: initiatorId ?? this.initiatorId,
+      participantIds: participantIds ?? this.participantIds,
+      type: type ?? this.type,
+      status: status ?? this.status,
+      startedAt: startedAt ?? this.startedAt,
+      endedAt: endedAt ?? this.endedAt,
+      duration: duration ?? this.duration,
+      endReason: endReason ?? this.endReason,
+      quality: quality ?? this.quality,
+      isRecording: isRecording ?? this.isRecording,
+      recordingUrl: recordingUrl ?? this.recordingUrl,
+      settings: settings ?? this.settings,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
   factory CallModel.fromJson(Map<String, dynamic> json) {
     return CallModel(
       id: json['id'] ?? json['_id'] ?? '',

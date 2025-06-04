@@ -9,6 +9,7 @@ import '../../services/websocket/chat_socket.dart';
 import '../../services/storage/cache_service.dart';
 import '../../models/chat/chat_model.dart';
 import '../../models/common/api_response.dart';
+import '../../services/websocket/websocket_event_types.dart';
 
 // Chat state
 class ChatState {

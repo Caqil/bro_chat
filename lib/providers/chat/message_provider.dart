@@ -7,6 +7,8 @@ import '../../services/storage/cache_service.dart';
 import '../../models/chat/message_model.dart';
 import '../../models/common/api_response.dart';
 import '../../services/websocket/chat_socket.dart';
+import '../../services/websocket/websocket_event_types.dart';
+import '../../core/config/dio_config.dart';
 
 // Message state for a specific chat
 class ChatMessageState {
@@ -64,12 +66,14 @@ class ChatMessageState {
     }
   }
 
-  int? getMessageIndex(String messageId) {
+  int getMessageIndex(String messageId) {
     return messages.indexWhere((msg) => msg.id == messageId);
   }
 
   List<MessageModel> getUnreadMessages() {
-    return messages.where((msg) => msg.status != MessageStatus.read).toList();
+    return messages
+        .where((msg) => msg.status != MessageStatusType.read)
+        .toList();
   }
 
   int get unreadCount => getUnreadMessages().length;
@@ -81,9 +85,9 @@ class MessageNotifier extends StateNotifier<AsyncValue<ChatMessageState>> {
   final ChatSocketService _chatSocketService;
   final CacheService _cacheService;
 
-  StreamSubscription<ChatMessage>? _messageSubscription;
-  StreamSubscription<MessageStatus>? _statusSubscription;
-  StreamSubscription<MessageReaction>? _reactionSubscription;
+  StreamSubscription<MessageModel>? _messageSubscription;
+  StreamSubscription<MessageStatusUpdate>? _statusSubscription;
+  StreamSubscription<MessageReactionEvent>? _reactionSubscription;
   StreamSubscription<ChatUpdate>? _updateSubscription;
 
   Timer? _sendDebounceTimer;
@@ -133,10 +137,8 @@ class MessageNotifier extends StateNotifier<AsyncValue<ChatMessageState>> {
         false;
   }
 
-  void _handleNewMessage(ChatMessage socketMessage) {
+  void _handleNewMessage(MessageModel message) {
     state.whenData((messageState) {
-      final message = _convertSocketMessageToMessageModel(socketMessage);
-
       if (messageState.getMessage(message.id) != null) return;
 
       final updatedMessages = [message, ...messageState.messages];
@@ -146,7 +148,7 @@ class MessageNotifier extends StateNotifier<AsyncValue<ChatMessageState>> {
     });
   }
 
-  void _handleMessageStatus(MessageStatusType status) {
+  void _handleMessageStatus(MessageStatusUpdate status) {
     state.whenData((messageState) {
       final messageIndex = messageState.getMessageIndex(status.messageId);
       if (messageIndex == -1) return;
@@ -154,30 +156,16 @@ class MessageNotifier extends StateNotifier<AsyncValue<ChatMessageState>> {
       final updatedMessages = List<MessageModel>.from(messageState.messages);
       final message = updatedMessages[messageIndex];
 
-      MessageStatusType newStatus;
-      switch (status.status) {
-        case MessageStatusType.delivered:
-          newStatus = MessageStatusType.delivered;
-          break;
-        case MessageStatusType.read:
-          newStatus = MessageStatusType.read;
-          break;
-        case MessageStatusType.failed:
-          newStatus = MessageStatusType.failed;
-          break;
-        default:
-          newStatus = message.status;
-      }
-
       List<MessageReadReceipt> updatedReadReceipts = List.from(
         message.readReceipts,
       );
-      if (status.status == MessageStatusType.read && status.userId != null) {
-        final existingReceipt = updatedReadReceipts
-            .where((receipt) => receipt.userId == status.userId!)
-            .firstOrNull;
 
-        if (existingReceipt == null) {
+      if (status.status == MessageStatusType.read && status.userId != null) {
+        final existingReceiptIndex = updatedReadReceipts.indexWhere(
+          (receipt) => receipt.userId == status.userId!,
+        );
+
+        if (existingReceiptIndex == -1) {
           updatedReadReceipts.add(
             MessageReadReceipt(
               userId: status.userId!,
@@ -189,7 +177,7 @@ class MessageNotifier extends StateNotifier<AsyncValue<ChatMessageState>> {
       }
 
       updatedMessages[messageIndex] = message.copyWith(
-        status: newStatus,
+        status: status.status,
         readReceipts: updatedReadReceipts,
       );
 
@@ -197,21 +185,32 @@ class MessageNotifier extends StateNotifier<AsyncValue<ChatMessageState>> {
     });
   }
 
-  void _handleMessageReaction(MessageReaction reaction) {
+  void _handleMessageReaction(MessageReactionEvent reactionEvent) {
     state.whenData((messageState) {
-      final messageIndex = messageState.getMessageIndex(reaction.messageId);
+      final messageIndex = messageState.getMessageIndex(
+        reactionEvent.messageId,
+      );
       if (messageIndex == -1) return;
 
       final updatedMessages = List<MessageModel>.from(messageState.messages);
       final message = updatedMessages[messageIndex];
       final updatedReactions = List<MessageReaction>.from(message.reactions);
 
-      if (reaction.action == ReactionAction.add) {
-        updatedReactions.removeWhere((r) => r.userId == reaction.userId);
-        updatedReactions.add(reaction);
+      if (reactionEvent.action == ReactionAction.add) {
+        updatedReactions.removeWhere((r) => r.userId == reactionEvent.userId);
+        updatedReactions.add(
+          MessageReaction(
+            emoji: reactionEvent.emoji,
+            userId: reactionEvent.userId,
+            userName: reactionEvent.userName,
+            createdAt: reactionEvent.timestamp,
+          ),
+        );
       } else {
         updatedReactions.removeWhere(
-          (r) => r.userId == reaction.userId && r.emoji == reaction.emoji,
+          (r) =>
+              r.userId == reactionEvent.userId &&
+              r.emoji == reactionEvent.emoji,
         );
       }
 
@@ -267,7 +266,6 @@ class MessageNotifier extends StateNotifier<AsyncValue<ChatMessageState>> {
   void _handleMessageEdited(Map<String, dynamic> data) {
     final messageId = data['message_id'] as String?;
     final newContent = data['content'] as String?;
-    final editedAt = data['edited_at'] as String?;
 
     if (messageId == null || newContent == null) return;
 
@@ -283,21 +281,6 @@ class MessageNotifier extends StateNotifier<AsyncValue<ChatMessageState>> {
 
       state = AsyncValue.data(messageState.copyWith(messages: updatedMessages));
     });
-  }
-
-  MessageModel _convertSocketMessageToMessageModel(ChatMessage socketMessage) {
-    return MessageModel(
-      id: socketMessage.id,
-      chatId: socketMessage.chatId,
-      senderId: socketMessage.senderId,
-      type: MessageType.fromString(socketMessage.type),
-      content: socketMessage.content,
-      createdAt: socketMessage.createdAt,
-      updatedAt: socketMessage.createdAt,
-      replyToId: socketMessage.replyToId,
-      mentions: socketMessage.mentions,
-      status: MessageStatus.sent,
-    );
   }
 
   Future<void> _loadInitialMessages() async {
@@ -434,7 +417,7 @@ class MessageNotifier extends StateNotifier<AsyncValue<ChatMessageState>> {
         updatedAt: DateTime.now(),
         replyToId: replyToId,
         mentions: mentions ?? [],
-        status: MessageStatus.sending,
+        status: MessageStatusType.sending,
       );
 
       // Add to UI immediately
@@ -464,7 +447,7 @@ class MessageNotifier extends StateNotifier<AsyncValue<ChatMessageState>> {
         state.whenData((messageState) {
           final updatedMessages = messageState.messages.map((msg) {
             if (msg.id == tempId) {
-              return sentMessage.copyWith(status: MessageStatus.sent);
+              return sentMessage.copyWith(status: MessageStatusType.sent);
             }
             return msg;
           }).toList();
@@ -486,8 +469,8 @@ class MessageNotifier extends StateNotifier<AsyncValue<ChatMessageState>> {
       // Update message status to failed
       state.whenData((messageState) {
         final updatedMessages = messageState.messages.map((msg) {
-          if (msg.id == tempMessage.id) {
-            return msg.copyWith(status: MessageStatus.failed);
+          if (msg.id.startsWith('temp_')) {
+            return msg.copyWith(status: MessageStatusType.failed);
           }
           return msg;
         }).toList();
@@ -497,7 +480,6 @@ class MessageNotifier extends StateNotifier<AsyncValue<ChatMessageState>> {
         );
       });
 
-      _sendingMessages.remove(tempMessage.id);
       rethrow;
     }
   }
@@ -554,7 +536,7 @@ class MessageNotifier extends StateNotifier<AsyncValue<ChatMessageState>> {
         state.whenData((messageState) {
           final updatedMessages = messageState.messages.map((msg) {
             if (messageIds.contains(msg.id)) {
-              return msg.copyWith(status: MessageStatus.read);
+              return msg.copyWith(status: MessageStatusType.read);
             }
             return msg;
           }).toList();

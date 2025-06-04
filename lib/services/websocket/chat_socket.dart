@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../storage/cache_service.dart';
 import 'websocket_service.dart';
+import 'websocket_event_types.dart';
 import '../../models/chat/message_model.dart';
 import '../../models/chat/chat_model.dart';
 
@@ -21,8 +22,8 @@ class ChatSocketService {
       StreamController<TypingStatus>.broadcast();
   final StreamController<ChatUpdate> _chatUpdateController =
       StreamController<ChatUpdate>.broadcast();
-  final StreamController<MessageReaction> _reactionController =
-      StreamController<MessageReaction>.broadcast();
+  final StreamController<MessageReactionEvent> _reactionController =
+      StreamController<MessageReactionEvent>.broadcast();
 
   // Active subscriptions
   final Set<String> _subscribedChats = <String>{};
@@ -55,7 +56,7 @@ class ChatSocketService {
       _messageStatusController.stream;
   Stream<TypingStatus> get typingStatus => _typingController.stream;
   Stream<ChatUpdate> get chatUpdates => _chatUpdateController.stream;
-  Stream<MessageReaction> get reactions => _reactionController.stream;
+  Stream<MessageReactionEvent> get reactions => _reactionController.stream;
 
   void _initialize() {
     // Listen to WebSocket events
@@ -273,7 +274,7 @@ class ChatSocketService {
 
   void _handleMessageReaction(WebSocketEvent event) {
     try {
-      final reaction = MessageReaction.fromJson(event.data);
+      final reaction = MessageReactionEvent.fromJson(event.data);
       _reactionController.add(reaction);
 
       if (kDebugMode) {
@@ -622,10 +623,8 @@ class ChatSocketService {
     return chatUpdates.where((update) => update.chatId == chatId);
   }
 
-  Stream<MessageReaction> getReactionsForMessage(String messageId) {
-    return reactions.where(
-      (reaction) => reaction.userId == messageId,
-    ); // This should be fixed in your actual implementation
+  Stream<MessageReactionEvent> getReactionsForMessage(String messageId) {
+    return reactions.where((reaction) => reaction.messageId == messageId);
   }
 
   // Helper methods
@@ -666,55 +665,6 @@ class ChatSocketService {
   }
 }
 
-// Additional service-specific models (not duplicated in models folder)
-class MessageStatusUpdate {
-  final String messageId;
-  final MessageStatusType status;
-  final String? userId;
-  final DateTime timestamp;
-
-  MessageStatusUpdate({
-    required this.messageId,
-    required this.status,
-    this.userId,
-    required this.timestamp,
-  });
-}
-
-class TypingStatus {
-  final String chatId;
-  final String userId;
-  final String? userName;
-  final bool isTyping;
-  final Set<String> typingUsers;
-
-  TypingStatus({
-    required this.chatId,
-    required this.userId,
-    this.userName,
-    required this.isTyping,
-    required this.typingUsers,
-  });
-}
-
-enum ChatUpdateType {
-  chatCreated,
-  chatDeleted,
-  chatUpdated,
-  participantAdded,
-  participantRemoved,
-  messageDeleted,
-  messageEdited,
-}
-
-class ChatUpdate {
-  final ChatUpdateType type;
-  final String chatId;
-  final Map<String, dynamic> data;
-
-  ChatUpdate({required this.type, required this.chatId, required this.data});
-}
-
 // Riverpod providers
 final chatSocketServiceProvider = Provider<ChatSocketService>((ref) {
   return ChatSocketService();
@@ -750,9 +700,8 @@ final messageStatusProvider =
       return service.getStatusForMessage(messageId);
     });
 
-final messageReactionsProvider = StreamProvider.family<MessageReaction, String>(
-  (ref, messageId) {
-    final service = ref.watch(chatSocketServiceProvider);
-    return service.getReactionsForMessage(messageId);
-  },
-);
+final messageReactionsProvider =
+    StreamProvider.family<MessageReactionEvent, String>((ref, messageId) {
+      final service = ref.watch(chatSocketServiceProvider);
+      return service.getReactionsForMessage(messageId);
+    });

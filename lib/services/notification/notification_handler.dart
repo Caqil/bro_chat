@@ -7,6 +7,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../../core/config/dio_config.dart';
 import '../storage/local_storage.dart';
+import '../websocket/websocket_event_types.dart';
 import '../websocket/websocket_service.dart';
 import '../websocket/chat_socket.dart';
 import '../websocket/call_socket.dart';

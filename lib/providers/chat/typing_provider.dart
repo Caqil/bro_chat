@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../services/websocket/chat_socket.dart';
 import '../../services/storage/cache_service.dart';
+import '../../services/websocket/websocket_event_types.dart';
 
 // Typing state for a chat
 class ChatTypingState {
