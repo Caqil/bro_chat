@@ -2,7 +2,13 @@ class ApiConstants {
   // Base API path
   static const String apiVersion = 'v1';
   static const String basePath = '/api/$apiVersion';
+  static const String notificationSettings = '/api/notifications/settings';
 
+  // Group settings endpoints
+  static String getGroupSettings(String groupId) =>
+      '/api/groups/$groupId/settings';
+  static String updateGroupSettings(String groupId) =>
+      '/api/groups/$groupId/settings';
   // Authentication Endpoints
   static const String auth = '/auth';
   static const String authRegister = '$auth/register';
@@ -78,9 +84,6 @@ class ApiConstants {
       '$groups/$groupId/members/$userId';
   static String leaveGroup(String groupId) => '$groups/$groupId/leave';
   static String getGroupStats(String groupId) => '$groups/$groupId/stats';
-  static String getGroupSettings(String groupId) => '$groups/$groupId/settings';
-  static String updateGroupSettings(String groupId) =>
-      '$groups/$groupId/settings';
 
   // Group member management
   static String muteMember(String groupId, String userId) =>
@@ -93,6 +96,31 @@ class ApiConstants {
       '$groups/$groupId/members/$userId/ban';
   static String unbanMember(String groupId, String userId) =>
       '$groups/$groupId/members/$userId/ban';
+  static String joinGroup(String groupId) => '/api/groups/$groupId/join';
+  static const String joinGroupByInvite = '/api/groups/join';
+  static String archiveGroup(String groupId) => '/api/groups/$groupId/archive';
+  static String muteGroup(String groupId) => '/api/groups/$groupId/mute';
+  static String pinGroup(String groupId) => '/api/groups/$groupId/pin';
+  static String generateGroupInviteLink(String groupId) =>
+      '/api/groups/$groupId/invite-link';
+  static String revokeGroupInviteLink(String groupId) =>
+      '/api/groups/$groupId/invite-link';
+
+  // Group member endpoints
+  static String getGroupMember(String groupId, String userId) =>
+      '/api/groups/$groupId/members/$userId';
+  static String updateGroupMemberRole(String groupId, String userId) =>
+      '/api/groups/$groupId/members/$userId/role';
+  static String muteGroupMember(String groupId, String userId) =>
+      '/api/groups/$groupId/members/$userId/mute';
+  static String unmuteGroupMember(String groupId, String userId) =>
+      '/api/groups/$groupId/members/$userId/mute';
+  static String banGroupMember(String groupId, String userId) =>
+      '/api/groups/$groupId/members/$userId/ban';
+  static String unbanGroupMember(String groupId, String userId) =>
+      '/api/groups/$groupId/members/$userId/ban';
+  static String setGroupMemberTitle(String groupId, String userId) =>
+      '/api/groups/$groupId/members/$userId/title';
 
   // Group join requests
   static String getJoinRequests(String groupId) => '$groups/$groupId/requests';
@@ -330,7 +358,7 @@ class ApiConstants {
   static const String errorCodePasswordTooWeak = 'password_too_weak';
   static const String errorCodeFileTooBig = 'file_too_big';
   static const String errorCodeQuotaExceeded = 'quota_exceeded';
-
+  static const String getUsersOnlineStatus = '/api/users/online-status';
   // Response Fields
   static const String fieldSuccess = 'success';
   static const String fieldMessage = 'message';

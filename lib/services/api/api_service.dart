@@ -17,6 +17,8 @@ import '../../models/common/api_response.dart';
 import '../../models/file/file_model.dart';
 import '../../models/group/group_member.dart';
 import '../../models/group/group_model.dart';
+import '../../providers/group/group_member_provider.dart';
+import '../../providers/group/group_provider.dart';
 import '../storage/cache_service.dart';
 import '../storage/secure_storage.dart';
 
@@ -678,25 +680,99 @@ class ApiService {
     }
   }
 
-  Future<ApiResponse<GroupModel>> updateGroup(
+  Future<ApiResponse<void>> muteGroup(
     String groupId, {
-    String? name,
-    String? description,
+    required bool mute,
+    DateTime? mutedUntil,
   }) async {
     try {
-      final updateData = <String, dynamic>{};
-      if (name != null) updateData['name'] = name;
-      if (description != null) updateData['description'] = description;
-
       final response = await _dio.put(
-        ApiConstants.updateGroup(groupId),
-        data: updateData,
+        ApiConstants.muteGroup(groupId),
+        data: {
+          'muted': mute,
+          if (mutedUntil != null) 'muted_until': mutedUntil.toIso8601String(),
+        },
       );
 
-      return ApiResponse.fromJson(
-        response.data,
-        (data) => GroupModel.fromJson(data),
+      return ApiResponse.fromJson(response.data, null);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<void>> pinGroup(String groupId, bool pin) async {
+    try {
+      final response = await _dio.put(
+        ApiConstants.pinGroup(groupId),
+        data: {'pinned': pin},
       );
+
+      return ApiResponse.fromJson(response.data, null);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> generateGroupInviteLink(
+    String groupId, {
+    DateTime? expiresAt,
+    int? maxUses,
+  }) async {
+    try {
+      final requestData = <String, dynamic>{};
+      if (expiresAt != null) {
+        requestData['expires_at'] = expiresAt.toIso8601String();
+      }
+      if (maxUses != null) {
+        requestData['max_uses'] = maxUses;
+      }
+
+      final response = await _dio.post(
+        ApiConstants.generateGroupInviteLink(groupId),
+        data: requestData,
+      );
+
+      return ApiResponse.fromJson(response.data, (data) => data);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<void>> revokeGroupInviteLink(String groupId) async {
+    try {
+      final response = await _dio.delete(
+        ApiConstants.revokeGroupInviteLink(groupId),
+      );
+
+      return ApiResponse.fromJson(response.data, null);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  // Group Settings API
+  Future<ApiResponse<Map<String, dynamic>>> getGroupSettings(
+    String groupId,
+  ) async {
+    try {
+      final response = await _dio.get(ApiConstants.getGroupSettings(groupId));
+      return ApiResponse.fromJson(response.data, (data) => data);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<void>> updateGroupSettings(
+    String groupId,
+    Map<String, dynamic> settings,
+  ) async {
+    try {
+      final response = await _dio.put(
+        ApiConstants.updateGroupSettings(groupId),
+        data: settings,
+      );
+
+      return ApiResponse.fromJson(response.data, null);
     } catch (e) {
       throw _handleError(e);
     }
@@ -711,15 +787,24 @@ class ApiService {
     }
   }
 
-  Future<ApiResponse<List<GroupMember>>> getGroupMembers(
-    String groupId,
-  ) async {
+  // Group Member Management Extended API
+  Future<ApiResponse<List<GroupMemberInfo>>> getGroupMembers(
+    String groupId, {
+    int page = 1,
+    int limit = 50,
+  }) async {
     try {
-      final response = await _dio.get(ApiConstants.getGroupMembers(groupId));
+      final queryParams = <String, dynamic>{'page': page, 'limit': limit};
+
+      final response = await _dio.get(
+        ApiConstants.getGroupMembers(groupId),
+        queryParameters: queryParams,
+      );
+
       return ApiResponse.fromJson(
         response.data,
         (data) => (data as List)
-            .map((member) => GroupMember.fromJson(member))
+            .map((member) => GroupMemberInfo.fromJson(member))
             .toList(),
       );
     } catch (e) {
@@ -1108,14 +1193,25 @@ class ApiService {
     }
   }
 
-  Future<Uint8List> downloadFile(String fileId) async {
+  Future<ApiResponse<Response>> downloadFile({
+    required String fileId,
+    required String savePath,
+    Function(int, int)? onReceiveProgress,
+    CancelToken? cancelToken,
+  }) async {
     try {
-      final response = await _dio.get(
+      final response = await _dio.download(
         ApiConstants.downloadFile(fileId),
-        options: Options(responseType: ResponseType.bytes),
+        savePath,
+        onReceiveProgress: onReceiveProgress,
+        cancelToken: cancelToken,
       );
 
-      return Uint8List.fromList(response.data);
+      return ApiResponse<Response>(
+        success: true,
+        message: 'File downloaded successfully',
+        data: response,
+      );
     } catch (e) {
       throw _handleError(e);
     }
@@ -1284,6 +1380,228 @@ class ApiService {
     }
   }
 
+  Future<ApiResponse<void>> updateNotificationSettings(
+    Map<String, dynamic> settings,
+  ) async {
+    try {
+      final response = await _dio.put(
+        ApiConstants.notificationSettings, // You'll need to add this constant
+        data: settings,
+      );
+
+      return ApiResponse.fromJson(response.data, null);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<void>> banGroupMember(
+    String groupId,
+    String userId, {
+    int? duration,
+    String? reason,
+  }) async {
+    try {
+      final requestData = <String, dynamic>{};
+      if (duration != null) requestData['duration'] = duration;
+      if (reason != null) requestData['reason'] = reason;
+
+      final response = await _dio.post(
+        ApiConstants.banGroupMember(groupId, userId),
+        data: requestData,
+      );
+
+      return ApiResponse.fromJson(response.data, null);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<void>> unbanGroupMember(
+    String groupId,
+    String userId,
+  ) async {
+    try {
+      final response = await _dio.delete(
+        ApiConstants.unbanGroupMember(groupId, userId),
+      );
+
+      return ApiResponse.fromJson(response.data, null);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<void>> setGroupMemberTitle(
+    String groupId,
+    String userId,
+    String? title,
+  ) async {
+    try {
+      final response = await _dio.put(
+        ApiConstants.setGroupMemberTitle(groupId, userId),
+        data: {'custom_title': title},
+      );
+
+      return ApiResponse.fromJson(response.data, null);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<void>> unmuteGroupMember(
+    String groupId,
+    String userId,
+  ) async {
+    try {
+      final response = await _dio.delete(
+        ApiConstants.unmuteGroupMember(groupId, userId),
+      );
+
+      return ApiResponse.fromJson(response.data, null);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<GroupMemberInfo>> getGroupMember(
+    String groupId,
+    String userId,
+  ) async {
+    try {
+      final response = await _dio.get(
+        ApiConstants.getGroupMember(groupId, userId),
+      );
+
+      return ApiResponse.fromJson(
+        response.data,
+        (data) => GroupMemberInfo.fromJson(data),
+      );
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<void>> muteGroupMember(
+    String groupId,
+    String userId, {
+    int? duration,
+    String? reason,
+  }) async {
+    try {
+      final requestData = <String, dynamic>{};
+      if (duration != null) requestData['duration'] = duration;
+      if (reason != null) requestData['reason'] = reason;
+
+      final response = await _dio.post(
+        ApiConstants.muteGroupMember(groupId, userId),
+        data: requestData,
+      );
+
+      return ApiResponse.fromJson(response.data, null);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<void>> updateGroupMemberRole(
+    String groupId,
+    String userId,
+    String role,
+  ) async {
+    try {
+      final response = await _dio.put(
+        ApiConstants.updateGroupMemberRole(groupId, userId),
+        data: {'role': role},
+      );
+
+      return ApiResponse.fromJson(response.data, null);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  // User Status API
+  Future<ApiResponse<Map<String, bool>>> getUsersOnlineStatus(
+    List<String> userIds,
+  ) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.getUsersOnlineStatus,
+        data: {'user_ids': userIds},
+      );
+
+      return ApiResponse.fromJson(
+        response.data,
+        (data) => Map<String, bool>.from(data),
+      );
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  // Group Management Extended API
+  Future<ApiResponse<GroupInfo>> joinGroup(String groupId) async {
+    try {
+      final response = await _dio.post(ApiConstants.joinGroup(groupId));
+      return ApiResponse.fromJson(
+        response.data,
+        (data) => GroupInfo.fromJson(data),
+      );
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Update group info (name, description, etc.)
+  Future<ApiResponse<GroupInfo>> updateGroup(
+    String groupId,
+    Map<String, dynamic> updateData,
+  ) async {
+    try {
+      final response = await _dio.put(
+        ApiConstants.updateGroup(groupId),
+        data: updateData,
+      );
+
+      return ApiResponse.fromJson(
+        response.data,
+        (data) => GroupInfo.fromJson(data),
+      );
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<GroupInfo>> joinGroupByInvite(String inviteCode) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.joinGroupByInvite,
+        data: {'invite_code': inviteCode},
+      );
+
+      return ApiResponse.fromJson(
+        response.data,
+        (data) => GroupInfo.fromJson(data),
+      );
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Future<ApiResponse<void>> archiveGroup(String groupId, bool archive) async {
+    try {
+      final response = await _dio.put(
+        ApiConstants.archiveGroup(groupId),
+        data: {'archived': archive},
+      );
+
+      return ApiResponse.fromJson(response.data, null);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   // Error handling
   Exception _handleError(dynamic error) {
     if (error is DioException) {
@@ -1356,4 +1674,3 @@ class AuthResponse {
     );
   }
 }
-

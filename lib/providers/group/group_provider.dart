@@ -780,9 +780,9 @@ class GroupNotifier extends StateNotifier<AsyncValue<GroupState>> {
       );
 
       if (response.success && response.data != null) {
-        final inviteLink = response.data['invite_link'] as String;
-        final expiry = response.data['expires_at'] != null
-            ? DateTime.tryParse(response.data['expires_at'])
+        final inviteLink = response.data!['invite_link'] as String;
+        final expiry = response.data!['expires_at'] != null
+            ? DateTime.tryParse(response.data!['expires_at'])
             : null;
 
         state.whenData((groupState) {

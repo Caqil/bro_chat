@@ -94,6 +94,142 @@ class CacheService {
     return box;
   }
 
+  /// Get cached group members
+  Future<List<Map<String, dynamic>>> getCachedGroupMembers(
+    String groupId,
+  ) async {
+    try {
+      final box = await Hive.openBox('group_members');
+      final data = box.get(groupId);
+      if (data != null) {
+        return List<Map<String, dynamic>>.from(data);
+      }
+      return [];
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error getting cached group members: $e');
+      }
+      return [];
+    }
+  }
+
+  /// Cache group settings
+  Future<void> cacheGroupSettings(
+    String groupId,
+    Map<String, dynamic> settings,
+  ) async {
+    try {
+      final box = await Hive.openBox('group_settings');
+      await box.put(groupId, settings);
+
+      if (kDebugMode) {
+        print('✅ Group settings cached for: $groupId');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error caching group settings: $e');
+      }
+      throw CacheException('Failed to cache group settings: $e');
+    }
+  }
+
+  /// Get cached group settings
+  Future<Map<String, dynamic>?> getCachedGroupSettings(String groupId) async {
+    try {
+      final box = await Hive.openBox('group_settings');
+      final data = box.get(groupId);
+      if (data != null) {
+        return Map<String, dynamic>.from(data);
+      }
+      return null;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error getting cached group settings: $e');
+      }
+      return null;
+    }
+  }
+
+  /// Remove cached group
+  Future<void> removeCachedGroup(String groupId) async {
+    try {
+      final box = await Hive.openBox('groups');
+      await box.delete(groupId);
+
+      if (kDebugMode) {
+        print('✅ Group cache removed: $groupId');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error removing cached group: $e');
+      }
+    }
+  }
+
+  /// Cache group members
+  Future<void> cacheGroupMembers(
+    String groupId,
+    List<Map<String, dynamic>> members,
+  ) async {
+    try {
+      final box = await Hive.openBox('group_members');
+      await box.put(groupId, members);
+
+      if (kDebugMode) {
+        print(
+          '✅ Group members cached for: $groupId (${members.length} members)',
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error caching group members: $e');
+      }
+      throw CacheException('Failed to cache group members: $e');
+    }
+  }
+
+  /// Cache upload task
+  Future<void> cacheUploadTask(
+    String taskId,
+    Map<String, dynamic> taskData,
+  ) async {
+    try {
+      final box = await Hive.openBox('upload_tasks');
+      await box.put(taskId, taskData);
+
+      if (kDebugMode) {
+        print('✅ Upload task cached: $taskId');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error caching upload task: $e');
+      }
+      throw CacheException('Failed to cache upload task: $e');
+    }
+  }
+
+  /// Get cached files
+  Future<List<Map<String, dynamic>>> getCachedFiles() async {
+    try {
+      final box = await Hive.openBox('files');
+      final files = <Map<String, dynamic>>[];
+
+      for (final key in box.keys) {
+        final data = box.get(key);
+        if (data != null) {
+          files.add(Map<String, dynamic>.from(data));
+        }
+      }
+
+      return files;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error getting cached files: $e');
+      }
+      return [];
+    }
+  }
+
   // Messages Cache
   Future<void> cacheMessage(
     String messageId,
@@ -120,6 +256,27 @@ class CacheService {
     }
   }
 
+  Future<List<Map<String, dynamic>>> getPendingUploads() async {
+    try {
+      final box = await Hive.openBox('upload_tasks');
+      final uploadTasks = <Map<String, dynamic>>[];
+
+      for (final key in box.keys) {
+        final data = box.get(key);
+        if (data != null) {
+          uploadTasks.add(Map<String, dynamic>.from(data));
+        }
+      }
+
+      return uploadTasks;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error getting pending uploads: $e');
+      }
+      return [];
+    }
+  }
+
   Future<Map<String, dynamic>?> getCachedMessage(String messageId) async {
     try {
       final box = _getBox(_messagesBox);
@@ -142,6 +299,24 @@ class CacheService {
         print('❌ Error getting cached message: $e');
       }
       return null;
+    }
+  }
+
+  Future<void> cacheConnectivityState(
+    Map<String, dynamic> connectivityData,
+  ) async {
+    try {
+      final box = await Hive.openBox('connectivity');
+      await box.put('connectivity_state', connectivityData);
+
+      if (kDebugMode) {
+        print('✅ Connectivity state cached');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error caching connectivity state: $e');
+      }
+      throw CacheException('Failed to cache connectivity state: $e');
     }
   }
 
@@ -469,35 +644,19 @@ class CacheService {
     }
   }
 
-  // Files Cache
-  Future<void> cacheFile(
-    String fileId,
-    Uint8List fileData, {
-    String? mimeType,
-    Duration? expiry,
-  }) async {
+  Future<void> cacheFile(String fileId, Map<String, dynamic> fileData) async {
     try {
-      final box = _getBox(_filesBox);
-      final entry = CacheEntry(
-        data: {
-          'data': fileData,
-          'mime_type': mimeType,
-          'size': fileData.length,
-        },
-        timestamp: DateTime.now(),
-        expiresAt: DateTime.now().add(expiry ?? const Duration(days: 7)),
-      );
-
-      await box.put(fileId, entry.toJson());
+      final box = await Hive.openBox('files');
+      await box.put(fileId, fileData);
 
       if (kDebugMode) {
-        print('✅ File cached: $fileId (${fileData.length} bytes)');
+        print('✅ File cached: $fileId');
       }
     } catch (e) {
       if (kDebugMode) {
         print('❌ Error caching file: $e');
       }
-      throw CacheException.writeError(fileId);
+      throw CacheException('Failed to cache file: $e');
     }
   }
 
@@ -531,26 +690,20 @@ class CacheService {
     }
   }
 
-  // Media Cache (thumbnails, compressed images, etc.)
-  Future<void> cacheMedia(
-    String mediaId,
-    Uint8List mediaData, {
-    String? type,
-    Duration? expiry,
-  }) async {
+  /// Cache media files
+  Future<void> cacheMedia(List<Map<String, dynamic>> mediaData) async {
     try {
-      final box = _getBox(_mediaBox);
-      final entry = CacheEntry(
-        data: {'data': mediaData, 'type': type, 'size': mediaData.length},
-        timestamp: DateTime.now(),
-        expiresAt: DateTime.now().add(expiry ?? const Duration(days: 14)),
-      );
+      final box = await Hive.openBox('media');
+      await box.put('cached_media', mediaData);
 
-      await box.put(mediaId, entry.toJson());
+      if (kDebugMode) {
+        print('✅ Media cached (${mediaData.length} items)');
+      }
     } catch (e) {
       if (kDebugMode) {
         print('❌ Error caching media: $e');
       }
+      throw CacheException('Failed to cache media: $e');
     }
   }
 

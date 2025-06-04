@@ -453,11 +453,10 @@ class FileNotifier extends StateNotifier<AsyncValue<FileState>> {
         purpose: purpose.name,
         chatId: chatId,
         public: public,
-        onSendProgress: (sent, total) {
+        onProgress: (sent, total) {
           final progress = sent / total;
           _updateUploadProgress(fileId, progress);
         },
-        cancelToken: cancelToken,
       );
 
       if (response.success && response.data != null) {
