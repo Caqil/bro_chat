@@ -278,7 +278,7 @@ class ChatListNotifier extends StateNotifier<AsyncValue<ChatListState>> {
     });
   }
 
-  void _handleNewMessage(ChatMessage message) {
+  void _handleNewMessage(MessageModel message) {
     state.whenData((chatListState) {
       final chatIndex = chatListState.chats.indexWhere(
         (chat) => chat.id == message.chatId,

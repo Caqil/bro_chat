@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
@@ -10,7 +9,6 @@ import 'package:ffmpeg_kit_flutter/return_code.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../core/exceptions/app_exception.dart';
-import '../../core/config/app_config.dart';
 import '../storage/cache_service.dart';
 import '../storage/local_storage.dart';
 

@@ -6,8 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../core/exceptions/app_exception.dart';
-import '../../core/config/app_config.dart';
-import '../storage/cache_service.dart';
 import '../storage/local_storage.dart';
 import 'location_service.dart';
 
@@ -207,7 +205,6 @@ class MapsService {
   static MapsService? _instance;
 
   final LocationService _locationService;
-  final CacheService _cacheService;
   final LocalStorage _localStorage;
 
   // Map controllers
@@ -242,7 +239,6 @@ class MapsService {
 
   MapsService._internal()
     : _locationService = LocationService(),
-      _cacheService = CacheService(),
       _localStorage = LocalStorage() {
     _initialize();
   }

@@ -1,53 +1,5 @@
 import '../../models/chat/message_model.dart';
 
-// Chat Message from WebSocket
-class ChatMessage {
-  final String id;
-  final String chatId;
-  final String senderId;
-  final String type;
-  final String content;
-  final DateTime createdAt;
-  final String? replyToId;
-  final List<String> mentions;
-  final bool isFromCurrentUser;
-  final String? mediaUrl;
-  final Map<String, dynamic>? metadata;
-
-  ChatMessage({
-    required this.id,
-    required this.chatId,
-    required this.senderId,
-    required this.type,
-    required this.content,
-    required this.createdAt,
-    this.replyToId,
-    this.mentions = const [],
-    this.isFromCurrentUser = false,
-    this.mediaUrl,
-    this.metadata,
-  });
-
-  factory ChatMessage.fromJson(Map<String, dynamic> json) {
-    return ChatMessage(
-      id: json['id'] ?? '',
-      chatId: json['chat_id'] ?? '',
-      senderId: json['sender_id'] ?? '',
-      type: json['type'] ?? 'text',
-      content: json['content'] ?? '',
-      createdAt: DateTime.parse(
-        json['created_at'] ?? DateTime.now().toIso8601String(),
-      ),
-      replyToId: json['reply_to_id'],
-      mentions: List<String>.from(json['mentions'] ?? []),
-      isFromCurrentUser: json['is_from_current_user'] ?? false,
-      mediaUrl: json['media_url'],
-      metadata: json['metadata'],
-    );
-  }
-}
-
-// Message Status Update from WebSocket
 class MessageStatusUpdate {
   final String messageId;
   final MessageStatusType status;

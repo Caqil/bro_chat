@@ -256,6 +256,64 @@ class CacheService {
     }
   }
 
+  Future<void> cacheCalls(List<Map<String, dynamic>> calls) async {
+    try {
+      final box = _getBox(_callsBox);
+      final batch = <String, dynamic>{};
+
+      for (final call in calls) {
+        final callId = call['id'] as String?;
+        if (callId != null) {
+          final entry = CacheEntry(
+            data: call,
+            timestamp: DateTime.now(),
+            expiresAt: DateTime.now().add(const Duration(days: 30)),
+          );
+          batch[callId] = entry.toJson();
+        }
+      }
+
+      await box.putAll(batch);
+
+      if (kDebugMode) {
+        print('✅ Cached ${calls.length} calls');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error caching calls: $e');
+      }
+    }
+  }
+
+  Future<void> cacheChats(List<Map<String, dynamic>> chats) async {
+    try {
+      final box = _getBox(_chatsBox);
+      final batch = <String, dynamic>{};
+
+      for (final chat in chats) {
+        final chatId = chat['id'] as String?;
+        if (chatId != null) {
+          final entry = CacheEntry(
+            data: chat,
+            timestamp: DateTime.now(),
+            expiresAt: DateTime.now().add(const Duration(days: 7)),
+          );
+          batch[chatId] = entry.toJson();
+        }
+      }
+
+      await box.putAll(batch);
+
+      if (kDebugMode) {
+        print('✅ Cached ${chats.length} chats');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error caching chats: $e');
+      }
+    }
+  }
+
   Future<Map<String, dynamic>?> getCachedChat(String chatId) async {
     try {
       final box = _getBox(_chatsBox);

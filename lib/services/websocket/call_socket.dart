@@ -779,14 +779,12 @@ class CallSocketService {
     }
   }
 
-  // Private helper methods
-
   Future<void> _initializeWebRTC() async {
     try {
-      final configuration = RTCConfiguration({
+      final configuration = {
         'iceServers': _iceServers ?? [],
         'iceCandidatePoolSize': 10,
-      });
+      };
 
       _peerConnection = await createPeerConnection(configuration);
 
@@ -928,42 +926,24 @@ class CallSocketService {
   }
 
   void _sendOffer(RTCSessionDescription offer) {
-    final event = WebSocketEvent(
-      type: WebSocketEventType.custom,
-      data: {
-        'action': 'webrtc_offer',
-        'call_id': _currentCallId,
-        'offer': offer.toMap(),
-      },
-    );
-
-    _webSocketService._sendEvent(event);
+    _webSocketService.sendCustomEvent('webrtc_offer', {
+      'call_id': _currentCallId,
+      'offer': offer.toMap(),
+    });
   }
 
   void _sendAnswer(RTCSessionDescription answer) {
-    final event = WebSocketEvent(
-      type: WebSocketEventType.custom,
-      data: {
-        'action': 'webrtc_answer',
-        'call_id': _currentCallId,
-        'answer': answer.toMap(),
-      },
-    );
-
-    _webSocketService._sendEvent(event);
+    _webSocketService.sendCustomEvent('webrtc_answer', {
+      'call_id': _currentCallId,
+      'answer': answer.toMap(),
+    });
   }
 
   void _sendICECandidate(RTCIceCandidate candidate) {
-    final event = WebSocketEvent(
-      type: WebSocketEventType.custom,
-      data: {
-        'action': 'webrtc_ice_candidate',
-        'call_id': _currentCallId,
-        'candidate': candidate.toMap(),
-      },
-    );
-
-    _webSocketService._sendEvent(event);
+    _webSocketService.sendCustomEvent('webrtc_ice_candidate', {
+      'call_id': _currentCallId,
+      'candidate': candidate.toMap(),
+    });
   }
 
   Future<void> _updateMediaState() async {

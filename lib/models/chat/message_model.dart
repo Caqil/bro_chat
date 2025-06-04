@@ -2,6 +2,7 @@ class MessageModel {
   final String id;
   final String chatId;
   final String senderId;
+  final String? senderName; // Add sender name for WebSocket events
   final MessageType type;
   final String content;
   final String? mediaUrl;
@@ -21,11 +22,13 @@ class MessageModel {
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<MessageReadReceipt> readReceipts;
+  final bool isFromCurrentUser; // Add for WebSocket compatibility
 
   MessageModel({
     required this.id,
     required this.chatId,
     required this.senderId,
+    this.senderName,
     required this.type,
     required this.content,
     this.mediaUrl,
@@ -45,64 +48,42 @@ class MessageModel {
     required this.createdAt,
     required this.updatedAt,
     this.readReceipts = const [],
+    this.isFromCurrentUser = false,
   });
 
-  // Add copyWith method
-  MessageModel copyWith({
-    String? id,
-    String? chatId,
-    String? senderId,
-    MessageType? type,
-    String? content,
-    String? mediaUrl,
-    String? thumbnailUrl,
-    Map<String, dynamic>? metadata,
-    String? replyToId,
-    MessageModel? replyToMessage,
-    List<String>? mentions,
-    List<MessageReaction>? reactions,
-    MessageStatusType? status,
-    bool? isEdited,
-    bool? isDeleted,
-    bool? isForwarded,
-    String? forwardedFromChatId,
-    String? forwardedFromUserId,
-    DateTime? scheduledAt,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-    List<MessageReadReceipt>? readReceipts,
-  }) {
+  // Factory constructor for WebSocket events (replaces ChatMessage.fromJson)
+  factory MessageModel.fromWebSocket(Map<String, dynamic> json) {
     return MessageModel(
-      id: id ?? this.id,
-      chatId: chatId ?? this.chatId,
-      senderId: senderId ?? this.senderId,
-      type: type ?? this.type,
-      content: content ?? this.content,
-      mediaUrl: mediaUrl ?? this.mediaUrl,
-      thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
-      metadata: metadata ?? this.metadata,
-      replyToId: replyToId ?? this.replyToId,
-      replyToMessage: replyToMessage ?? this.replyToMessage,
-      mentions: mentions ?? this.mentions,
-      reactions: reactions ?? this.reactions,
-      status: status ?? this.status,
-      isEdited: isEdited ?? this.isEdited,
-      isDeleted: isDeleted ?? this.isDeleted,
-      isForwarded: isForwarded ?? this.isForwarded,
-      forwardedFromChatId: forwardedFromChatId ?? this.forwardedFromChatId,
-      forwardedFromUserId: forwardedFromUserId ?? this.forwardedFromUserId,
-      scheduledAt: scheduledAt ?? this.scheduledAt,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-      readReceipts: readReceipts ?? this.readReceipts,
+      id: json['id'] ?? '',
+      chatId: json['chat_id'] ?? '',
+      senderId: json['sender_id'] ?? '',
+      senderName: json['sender_name'],
+      type: MessageType.fromString(json['type']),
+      content: json['content'] ?? '',
+      mediaUrl: json['media_url'],
+      metadata: json['metadata'],
+      replyToId: json['reply_to_id'],
+      mentions: List<String>.from(json['mentions'] ?? []),
+      createdAt: DateTime.parse(
+        json['created_at'] ?? DateTime.now().toIso8601String(),
+      ),
+      updatedAt: DateTime.parse(
+        json['updated_at'] ??
+            json['created_at'] ??
+            DateTime.now().toIso8601String(),
+      ),
+      isFromCurrentUser: json['is_from_current_user'] ?? false,
+      status: MessageStatusType.fromString(json['status']),
     );
   }
 
+  // Factory constructor for API responses (existing fromJson)
   factory MessageModel.fromJson(Map<String, dynamic> json) {
     return MessageModel(
       id: json['id'] ?? json['_id'] ?? '',
       chatId: json['chat_id'] ?? '',
       senderId: json['sender_id'] ?? '',
+      senderName: json['sender_name'],
       type: MessageType.fromString(json['type']),
       content: json['content'] ?? '',
       mediaUrl: json['media_url'],
@@ -130,6 +111,62 @@ class MessageModel {
       readReceipts: (json['read_receipts'] as List? ?? [])
           .map((e) => MessageReadReceipt.fromJson(e))
           .toList(),
+      isFromCurrentUser: json['is_from_current_user'] ?? false,
+    );
+  }
+
+  // Add copyWith method
+  MessageModel copyWith({
+    String? id,
+    String? chatId,
+    String? senderId,
+    String? senderName,
+    MessageType? type,
+    String? content,
+    String? mediaUrl,
+    String? thumbnailUrl,
+    Map<String, dynamic>? metadata,
+    String? replyToId,
+    MessageModel? replyToMessage,
+    List<String>? mentions,
+    List<MessageReaction>? reactions,
+    MessageStatusType? status,
+    bool? isEdited,
+    bool? isDeleted,
+    bool? isForwarded,
+    String? forwardedFromChatId,
+    String? forwardedFromUserId,
+    DateTime? scheduledAt,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    List<MessageReadReceipt>? readReceipts,
+    bool? isFromCurrentUser,
+  }) {
+    return MessageModel(
+      id: id ?? this.id,
+      chatId: chatId ?? this.chatId,
+      senderId: senderId ?? this.senderId,
+      senderName: senderName ?? this.senderName,
+      type: type ?? this.type,
+      content: content ?? this.content,
+      mediaUrl: mediaUrl ?? this.mediaUrl,
+      thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
+      metadata: metadata ?? this.metadata,
+      replyToId: replyToId ?? this.replyToId,
+      replyToMessage: replyToMessage ?? this.replyToMessage,
+      mentions: mentions ?? this.mentions,
+      reactions: reactions ?? this.reactions,
+      status: status ?? this.status,
+      isEdited: isEdited ?? this.isEdited,
+      isDeleted: isDeleted ?? this.isDeleted,
+      isForwarded: isForwarded ?? this.isForwarded,
+      forwardedFromChatId: forwardedFromChatId ?? this.forwardedFromChatId,
+      forwardedFromUserId: forwardedFromUserId ?? this.forwardedFromUserId,
+      scheduledAt: scheduledAt ?? this.scheduledAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      readReceipts: readReceipts ?? this.readReceipts,
+      isFromCurrentUser: isFromCurrentUser ?? this.isFromCurrentUser,
     );
   }
 
@@ -138,6 +175,7 @@ class MessageModel {
       'id': id,
       'chat_id': chatId,
       'sender_id': senderId,
+      if (senderName != null) 'sender_name': senderName,
       'type': type.value,
       'content': content,
       if (mediaUrl != null) 'media_url': mediaUrl,
@@ -159,6 +197,7 @@ class MessageModel {
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
       'read_receipts': readReceipts.map((e) => e.toJson()).toList(),
+      'is_from_current_user': isFromCurrentUser,
     };
   }
 

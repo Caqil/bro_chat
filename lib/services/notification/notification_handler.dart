@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:bro_chat/models/chat/message_model.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -7,7 +8,6 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../../core/config/dio_config.dart';
 import '../storage/local_storage.dart';
-import '../websocket/websocket_event_types.dart';
 import '../websocket/websocket_service.dart';
 import '../websocket/chat_socket.dart';
 import '../websocket/call_socket.dart';
@@ -371,7 +371,7 @@ class NotificationHandler {
     }
   }
 
-  Future<void> _handleChatMessage(ChatMessage message) async {
+  Future<void> _handleChatMessage(MessageModel message) async {
     try {
       // Don't show notification for current chat if app is in foreground
       if (_isInForeground && message.chatId == _currentChatId) {
@@ -719,24 +719,40 @@ class NotificationHandler {
     }
   }
 
-  String _getMessagePreview(ChatMessage message) {
+  String _getMessagePreview(MessageModel message) {
     switch (message.type) {
-      case 'text':
+      case MessageType.text:
         return message.content;
-      case 'image':
+      case MessageType.image:
         return '📷 Photo';
-      case 'video':
+      case MessageType.video:
         return '🎥 Video';
-      case 'audio':
+      case MessageType.audio:
         return '🎵 Audio';
-      case 'document':
+      case MessageType.document:
         return '📄 Document';
-      case 'location':
+      case MessageType.location:
         return '📍 Location';
-      case 'contact':
+      case MessageType.contact:
         return '👤 Contact';
-      case 'voice_note':
+      case MessageType.voiceNote:
         return '🎤 Voice message';
+      case MessageType.sticker:
+        return '🎭 Sticker';
+      case MessageType.gif:
+        return '🎬 GIF';
+      case MessageType.groupCreated:
+        return '👥 Group created';
+      case MessageType.groupDeleted:
+        return '🗑️ Group deleted';
+      case MessageType.memberAdded:
+        return '➕ Member added';
+      case MessageType.memberRemoved:
+        return '➖ Member removed';
+      case MessageType.callStarted:
+        return '📞 Call started';
+      case MessageType.callEnded:
+        return '📞 Call ended';
       default:
         return message.content.isNotEmpty ? message.content : 'New message';
     }

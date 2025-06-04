@@ -17,7 +17,6 @@ enum WebRTCConnectionState {
   closed,
 }
 
-// Media stream state
 class MediaStreamState {
   final MediaStream? localStream;
   final MediaStream? remoteStream;
@@ -27,7 +26,7 @@ class MediaStreamState {
   final bool frontCamera;
   final bool screenSharing;
 
-  MediaStreamState({
+  const MediaStreamState({
     this.localStream,
     this.remoteStream,
     this.audioEnabled = true,
@@ -56,9 +55,11 @@ class MediaStreamState {
       screenSharing: screenSharing ?? this.screenSharing,
     );
   }
+
+  // Static const instance for default state
+  static const empty = MediaStreamState();
 }
 
-// WebRTC state
 class WebRTCState {
   final WebRTCConnectionState connectionState;
   final MediaStreamState mediaState;
@@ -70,9 +71,9 @@ class WebRTCState {
   final RTCSessionDescription? localDescription;
   final RTCSessionDescription? remoteDescription;
 
-  WebRTCState({
+  const WebRTCState({
     this.connectionState = WebRTCConnectionState.disconnected,
-    this.mediaState = MediaStreamState(),
+    this.mediaState = const MediaStreamState(), // Now const!
     this.callId,
     this.error,
     this.isInitialized = false,

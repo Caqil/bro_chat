@@ -2,7 +2,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geocoding/geocoding.dart';
-import 'package:geolocator/geolocator.dart';
+import 'package:geolocator/geolocator.dart'
+    as geolocator; // Alias for geolocator package
 
 import '../../core/exceptions/app_exception.dart';
 import '../storage/cache_service.dart';
@@ -50,7 +51,10 @@ class LocationData {
     this.postalCode,
   });
 
-  factory LocationData.fromPosition(Position position, {String? address}) {
+  factory LocationData.fromPosition(
+    geolocator.Position position, {
+    String? address,
+  }) {
     return LocationData(
       latitude: position.latitude,
       longitude: position.longitude,
@@ -128,7 +132,7 @@ class LocationData {
   }
 
   double distanceTo(LocationData other) {
-    return Geolocator.distanceBetween(
+    return geolocator.Geolocator.distanceBetween(
       latitude,
       longitude,
       other.latitude,
@@ -137,7 +141,7 @@ class LocationData {
   }
 
   double bearingTo(LocationData other) {
-    return Geolocator.bearingBetween(
+    return geolocator.Geolocator.bearingBetween(
       latitude,
       longitude,
       other.latitude,
@@ -202,7 +206,7 @@ class LocationService {
       StreamController<LocationData>.broadcast();
 
   // Location tracking
-  StreamSubscription<Position>? _positionStreamSubscription;
+  StreamSubscription<geolocator.Position>? _positionStreamSubscription;
   Timer? _locationTimeoutTimer;
 
   // Cache
@@ -289,25 +293,26 @@ class LocationService {
 
   Future<void> _checkLocationServiceStatus() async {
     try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      final serviceEnabled =
+          await geolocator.Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         _setState(LocationServiceState.locationDisabled);
         return;
       }
 
-      final permission = await Geolocator.checkPermission();
+      final permission = await geolocator.Geolocator.checkPermission();
       switch (permission) {
-        case LocationPermission.denied:
+        case geolocator.LocationPermission.denied:
           _setState(LocationServiceState.permissionDenied);
           break;
-        case LocationPermission.deniedForever:
+        case geolocator.LocationPermission.deniedForever:
           _setState(LocationServiceState.permissionDeniedForever);
           break;
-        case LocationPermission.whileInUse:
-        case LocationPermission.always:
+        case geolocator.LocationPermission.whileInUse:
+        case geolocator.LocationPermission.always:
           _setState(LocationServiceState.ready);
           break;
-        case LocationPermission.unableToDetermine:
+        case geolocator.LocationPermission.unableToDetermine:
           _setState(LocationServiceState.error);
           break;
       }
@@ -331,8 +336,31 @@ class LocationService {
     }
   }
 
-  LocationAccuracy _convertAccuracy(LocationAccuracy accuracy) {
-    return accuracy;
+  geolocator.LocationAccuracy _mapLocationAccuracy(LocationAccuracy accuracy) {
+    switch (accuracy) {
+      case LocationAccuracy.lowest:
+        return geolocator.LocationAccuracy.lowest;
+      case LocationAccuracy.low:
+        return geolocator.LocationAccuracy.low;
+      case LocationAccuracy.medium:
+        return geolocator.LocationAccuracy.medium;
+      case LocationAccuracy.high:
+        return geolocator.LocationAccuracy.high;
+      case LocationAccuracy.best:
+        return geolocator.LocationAccuracy.best;
+      case LocationAccuracy.bestForNavigation:
+        return geolocator.LocationAccuracy.bestForNavigation;
+    }
+  }
+
+  geolocator.LocationSettings _mapToGeolocatorSettings(
+    LocationSettings settings,
+  ) {
+    return geolocator.LocationSettings(
+      accuracy: _mapLocationAccuracy(settings.accuracy),
+      distanceFilter: settings.distanceFilter,
+      timeLimit: settings.timeLimit,
+    );
   }
 
   // Public API
@@ -343,20 +371,20 @@ class LocationService {
         return false;
       }
 
-      final permission = await Geolocator.requestPermission();
+      final permission = await geolocator.Geolocator.requestPermission();
 
       switch (permission) {
-        case LocationPermission.denied:
+        case geolocator.LocationPermission.denied:
           _setState(LocationServiceState.permissionDenied);
           return false;
-        case LocationPermission.deniedForever:
+        case geolocator.LocationPermission.deniedForever:
           _setState(LocationServiceState.permissionDeniedForever);
           return false;
-        case LocationPermission.whileInUse:
-        case LocationPermission.always:
+        case geolocator.LocationPermission.whileInUse:
+        case geolocator.LocationPermission.always:
           _setState(LocationServiceState.ready);
           return true;
-        case LocationPermission.unableToDetermine:
+        case geolocator.LocationPermission.unableToDetermine:
           _setState(LocationServiceState.error);
           return false;
       }
@@ -373,7 +401,7 @@ class LocationService {
 
   Future<bool> openLocationSettings() async {
     try {
-      return await Geolocator.openLocationSettings();
+      return await geolocator.Geolocator.openLocationSettings();
     } catch (e) {
       if (kDebugMode) {
         print('❌ Error opening location settings: $e');
@@ -384,7 +412,7 @@ class LocationService {
 
   Future<bool> openAppSettings() async {
     try {
-      return await Geolocator.openAppSettings();
+      return await geolocator.Geolocator.openAppSettings();
     } catch (e) {
       if (kDebugMode) {
         print('❌ Error opening app settings: $e');
@@ -419,16 +447,12 @@ class LocationService {
       _setState(LocationServiceState.fetching);
 
       final locationSettings = settings ?? _settings;
-      final geolocatorSettings = LocationSettings(
-        accuracy: _mapLocationAccuracy(locationSettings.accuracy),
-        distanceFilter: locationSettings.distanceFilter,
-        timeLimit: locationSettings.timeLimit ?? const Duration(seconds: 30),
-      );
+      final geolocatorSettings = _mapToGeolocatorSettings(locationSettings);
 
       // Start timeout timer
       _startLocationTimeout();
 
-      final position = await Geolocator.getCurrentPosition(
+      final position = await geolocator.Geolocator.getCurrentPosition(
         locationSettings: geolocatorSettings,
       );
 
@@ -489,23 +513,6 @@ class LocationService {
     }
   }
 
-  LocationAccuracy _mapLocationAccuracy(LocationAccuracy accuracy) {
-    switch (accuracy) {
-      case LocationAccuracy.lowest:
-        return LocationAccuracy.lowest;
-      case LocationAccuracy.low:
-        return LocationAccuracy.low;
-      case LocationAccuracy.medium:
-        return LocationAccuracy.medium;
-      case LocationAccuracy.high:
-        return LocationAccuracy.high;
-      case LocationAccuracy.best:
-        return LocationAccuracy.best;
-      case LocationAccuracy.bestForNavigation:
-        return LocationAccuracy.bestForNavigation;
-    }
-  }
-
   void _startLocationTimeout() {
     _locationTimeoutTimer?.cancel();
     _locationTimeoutTimer = Timer(const Duration(seconds: 30), () {
@@ -534,16 +541,13 @@ class LocationService {
       }
 
       final locationSettings = settings ?? _settings;
-      final geolocatorSettings = LocationSettings(
-        accuracy: _mapLocationAccuracy(locationSettings.accuracy),
-        distanceFilter: locationSettings.distanceFilter,
-      );
+      final geolocatorSettings = _mapToGeolocatorSettings(locationSettings);
 
       _positionStreamSubscription =
-          Geolocator.getPositionStream(
+          geolocator.Geolocator.getPositionStream(
             locationSettings: geolocatorSettings,
           ).listen(
-            (Position position) async {
+            (geolocator.Position position) async {
               final locationData = LocationData.fromPosition(position);
 
               // Try to get address for new location
@@ -713,7 +717,7 @@ class LocationService {
   // Utility methods
 
   double calculateDistance(LocationData from, LocationData to) {
-    return Geolocator.distanceBetween(
+    return geolocator.Geolocator.distanceBetween(
       from.latitude,
       from.longitude,
       to.latitude,
@@ -722,7 +726,7 @@ class LocationService {
   }
 
   double calculateBearing(LocationData from, LocationData to) {
-    return Geolocator.bearingBetween(
+    return geolocator.Geolocator.bearingBetween(
       from.latitude,
       from.longitude,
       to.latitude,

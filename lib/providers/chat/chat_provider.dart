@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../models/chat/chat_settings.dart';
+import '../../models/chat/message_model.dart';
 import '../../models/chat/participant_model.dart';
 import '../../services/api/api_service.dart';
 import '../../services/websocket/chat_socket.dart';
@@ -60,7 +61,7 @@ class ChatNotifier extends StateNotifier<AsyncValue<ChatState>> {
   final CacheService _cacheService;
 
   StreamSubscription<ChatUpdate>? _chatUpdateSubscription;
-  StreamSubscription<ChatMessage>? _messageSubscription;
+  StreamSubscription<MessageModel>? _messageSubscription;
 
   ChatNotifier({
     required this.chatId,
@@ -181,7 +182,7 @@ class ChatNotifier extends StateNotifier<AsyncValue<ChatState>> {
     });
   }
 
-  void _handleNewMessage(ChatMessage message) {
+  void _handleNewMessage(MessageModel message) {
     state.whenData((chatState) {
       if (chatState.chat == null) return;
 
