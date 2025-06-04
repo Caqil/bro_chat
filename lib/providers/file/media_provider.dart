@@ -13,7 +13,7 @@ import '../../services/storage/cache_service.dart';
 import '../common/permission_provider.dart';
 import 'file_provider.dart';
 
-enum MediaType { image, video, audio }
+enum MediaType { image, video, audio, document }
 
 enum MediaSource { camera, gallery, microphone, file }
 
@@ -285,9 +285,42 @@ class MediaNotifier extends StateNotifier<AsyncValue<MediaState>> {
   Future<void> _loadRecentMedia() async {
     try {
       final cachedMedia = await _cacheService.getCachedMedia();
-      final mediaList = cachedMedia
-          .map((data) => MediaFile.fromJson(data))
-          .toList();
+      final mediaList = <MediaFile>[];
+
+      // Add type checking and validation
+      if (cachedMedia is List) {
+        for (final item in cachedMedia) {
+          try {
+            // Ensure each item is a Map before processing
+            if (item is Map<String, dynamic>) {
+              final mediaFile = MediaFile.fromJson(item);
+              mediaList.add(mediaFile);
+            } else if (item is Map) {
+              // Convert Map to Map<String, dynamic> if needed
+              final convertedMap = Map<String, dynamic>.from(item);
+              final mediaFile = MediaFile.fromJson(convertedMap);
+              mediaList.add(mediaFile);
+            } else {
+              if (kDebugMode) {
+                print(
+                  '⚠️ Skipping invalid media item type: ${item.runtimeType}',
+                );
+              }
+            }
+          } catch (e) {
+            if (kDebugMode) {
+              print('⚠️ Error parsing media item: $e');
+            }
+            // Continue with other items instead of failing completely
+          }
+        }
+      } else {
+        if (kDebugMode) {
+          print('⚠️ Cached media is not a List: ${cachedMedia.runtimeType}');
+        }
+        // Clear corrupted cache
+        await _cacheService.clearMediaCache();
+      }
 
       // Sort by creation date, most recent first
       mediaList.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -297,8 +330,20 @@ class MediaNotifier extends StateNotifier<AsyncValue<MediaState>> {
           recentMedia: mediaList.take(_maxRecentMedia).toList(),
         ),
       );
+
+      if (kDebugMode) {
+        print('✅ Loaded ${mediaList.length} media files from cache');
+      }
     } catch (e) {
       if (kDebugMode) print('❌ Error loading recent media: $e');
+
+      // Try to clear potentially corrupted cache
+      try {
+        await _cacheService.clearMediaCache();
+        if (kDebugMode) print('🧹 Cleared corrupted media cache');
+      } catch (clearError) {
+        if (kDebugMode) print('❌ Error clearing cache: $clearError');
+      }
     }
   }
 

@@ -401,7 +401,6 @@ class FileNotifier extends StateNotifier<AsyncValue<FileState>> {
     }
   }
 
-  // Public methods
   Future<FileInfo> uploadFile({
     required File file,
     required FilePurpose purpose,
@@ -410,8 +409,9 @@ class FileNotifier extends StateNotifier<AsyncValue<FileState>> {
     bool compress = true,
     Map<String, dynamic>? metadata,
   }) async {
+    final fileId = DateTime.now().millisecondsSinceEpoch
+        .toString(); // Moved outside try block
     try {
-      final fileId = DateTime.now().millisecondsSinceEpoch.toString();
       final mimeType = _getMimeType(file.path);
       final fileType = _getFileType(mimeType);
       final fileSize = await file.length();
@@ -496,12 +496,13 @@ class FileNotifier extends StateNotifier<AsyncValue<FileState>> {
       // Update file status to failed
       state.whenData((fileState) {
         final updatedFiles = Map<String, FileInfo>.from(fileState.files);
-        final failedFile = updatedFiles[fileId]?.copyWith(
-          status: FileStatus.failed,
-          error: e.toString(),
-        );
+        final failedFile = updatedFiles[fileId];
         if (failedFile != null) {
-          updatedFiles[fileId] = failedFile;
+          // Check if file exists
+          updatedFiles[fileId] = failedFile.copyWith(
+            status: FileStatus.failed,
+            error: e.toString(),
+          );
           state = AsyncValue.data(
             fileState.copyWith(
               files: updatedFiles,

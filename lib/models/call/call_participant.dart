@@ -72,6 +72,7 @@ enum ParticipantStatus {
   connecting,
   connected,
   disconnected,
+  muted,
   left;
 
   String get value => name;
@@ -88,6 +89,8 @@ enum ParticipantStatus {
         return ParticipantStatus.connected;
       case 'disconnected':
         return ParticipantStatus.disconnected;
+      case 'muted':
+        return ParticipantStatus.muted;
       case 'left':
         return ParticipantStatus.left;
       default:

@@ -2,9 +2,8 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart';
-
+import 'package:permission_handler/permission_handler.dart' as perm_handler;
 import '../../services/storage/local_storage.dart';
-import 'permission_provider.dart' as permission_handler;
 
 enum AppPermission {
   camera,
@@ -373,21 +372,19 @@ class PermissionNotifier extends StateNotifier<AsyncValue<PermissionState>> {
     }
   }
 
-  PermissionStatus _mapFromNativeStatus(
-    permission_handler.PermissionStatus status,
-  ) {
+  PermissionStatus _mapFromNativeStatus(perm_handler.PermissionStatus status) {
     switch (status) {
-      case permission_handler.PermissionStatus.denied:
+      case perm_handler.PermissionStatus.denied:
         return PermissionStatus.denied;
-      case permission_handler.PermissionStatus.granted:
+      case perm_handler.PermissionStatus.granted:
         return PermissionStatus.granted;
-      case permission_handler.PermissionStatus.restricted:
+      case perm_handler.PermissionStatus.restricted:
         return PermissionStatus.restricted;
-      case permission_handler.PermissionStatus.limited:
+      case perm_handler.PermissionStatus.limited:
         return PermissionStatus.limited;
-      case permission_handler.PermissionStatus.permanentlyDenied:
+      case perm_handler.PermissionStatus.permanentlyDenied:
         return PermissionStatus.permanentlyDenied;
-      case permission_handler.PermissionStatus.provisional:
+      case perm_handler.PermissionStatus.provisional:
         return PermissionStatus.provisional;
       default:
         return PermissionStatus.unknown;
